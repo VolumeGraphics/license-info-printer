@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "outDir": "lib",
+    "module": "commonjs",
+    "target": "es2017",
+    "noImplicitAny": true,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noImplicitThis": true,
+    "declaration": true
+  },
+  "include": [
+      "src/**/*"
+  ]
+}
