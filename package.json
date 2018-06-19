@@ -1,5 +1,5 @@
 {
-  "name": "license-info-printer",
+  "name": "@volumegraphics/license-info-printer",
   "version": "1.0.1",
   "description": "Collects and renders all dependant module licences of your project to a html document",
   "main": "./lib/index.js",
@@ -34,8 +34,5 @@
     "@types/node": "^10.3.3",
     "ts-node": "^6.0.3",
     "typescript": "^2.8.3"
-  },
-  "publishConfig": {
-    "registry": "http://vgqa02:8081/artifactory/api/npm/npm/"
   }
 }
