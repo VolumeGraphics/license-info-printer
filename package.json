@@ -12,6 +12,18 @@
   "author": "Volume Graphics GmbH",
   "homepage": "https://www.volumegraphics.com/",
   "license": "MIT",
+  "keywords": [
+    "license",
+    "licensing",
+    "collect",
+    "dependencies",
+    "html",
+    "cmd"
+  ],
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/VolumeGraphics/license-info-printer.git"
+  },
   "dependencies": {
     "command-line-args": "^5.0.2",
     "license-info-collector": "^1.0.2",
