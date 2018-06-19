@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-const ltd = require("license-info-printer");
+const ltd = require("@volumegraphics/license-info-printer");
 const fs = require("fs");
 const commandLineArgs = require('command-line-args');
 

@@ -1,7 +1,7 @@
 import * as fs from 'fs'
-import {findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author} from 'license-info-collector'
-import {applyOverrides, findUnusedOverrides, Override, Overrides} from 'license-info-collector'
-import {gatherLicenseSections, License, LicenseSection} from 'license-info-collector'
+import {findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author} from '@volumegraphics/license-info-collector'
+import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
+import {gatherLicenseSections, License, LicenseSection} from '@volumegraphics/license-info-collector'
 import * as mustache from 'mustache'
 // import {toHtml} from './html'
 
