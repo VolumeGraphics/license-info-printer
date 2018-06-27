@@ -1,7 +1,0 @@
-
-The following hompage overrides are redundant:
-indexof@0.0.1
-
-The following license overrides are redundant:
-indexof@0.0.1
-json-schema@0.2.3
