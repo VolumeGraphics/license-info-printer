@@ -1,6 +1,6 @@
 {
   "name": "@volumegraphics/license-info-printer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Collects and renders all dependant module licences of your project to a html document",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -25,7 +25,7 @@
     "url": "https://github.com/VolumeGraphics/license-info-printer.git"
   },
   "dependencies": {
-    "@volumegraphics/license-info-collector": "^1.0.2",
+    "@volumegraphics/license-info-collector": "^1.0.3",
     "command-line-args": "^5.0.2",
     "mustache": "^2.3.0"
   },

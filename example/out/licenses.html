@@ -1,0 +1,195 @@
+<html>
+
+<head>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: Verdana, sans-serif;
+    }
+    
+    body {
+      width: 206mm;
+      margin: 0 auto;
+      border: 1px solid black;
+    }
+
+    .header {
+      margin-bottom: 10mm;
+      padding: 5mm 15mm 5mm 20mm;
+      border-bottom: 1px solid black;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .footer {
+      margin-top: 10mm;
+      padding: 5mm 15mm 15mm 20mm;
+      border-top: 1px solid black;
+      display: flex;
+      direction: row;
+    }
+
+    .a4 {
+      background-color: rgb(255, 100, 100);
+      display: flex;
+      flex-direction: column;
+      width: 210mm;
+      height: 297mm;
+    }
+
+    .content {
+      flex-grow: 1;
+    }
+
+    .licenseInfo {
+      font-weight: bold;
+      font-size: 14;
+
+      flex-grow: 1;
+    }
+
+    .copyright {
+      font-size: 10;
+      flex-grow: 1;
+    }
+
+    .licenseHeader {
+      font-size: 20;
+      font-weight: bold;
+      margin: 10mm 0mm 5mm 0mm;
+      display: flex;
+      direction: row;
+    }
+
+    .licenseText {
+      border-top: 1px solid Gainsboro;
+      border-bottom: 1px solid Gainsboro;
+      font-size: 14;
+      padding: 2mm 0mm 2mm 0mm;
+      margin: 5mm 0mm 5mm 0mm;
+    }
+
+    .licenseLine {
+      font-size: 14;
+    }
+
+    .licenseIntro {
+      font-size: 14;
+    }
+
+    .licenseName {
+      font-weight: bold;
+    }
+
+    .mainContent {
+      margin-left: 20mm; 
+      margin-right: 20mm;
+    }
+    .marginRight {
+      margin-right: 10mm;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="pageHeader" class="header">
+    <div class="licenseInfo">
+      License Conditions
+      <br/> of Third Party Libraries
+    </div>
+    <img src="data:image/png;base64,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"/>
+  </div>
+  <div class="mainContent">
+    <div class="licenseIntro">
+      The license-info-printer-example makes use of the following 3rd party libraries:
+    </div>
+    <div>
+      <div>
+        <div class="licenseHeader">
+          <div class="marginRight">1</div>
+          <div>Third party libraries using the ISC license</div>
+        </div>
+        <div class="licenseText">
+          Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+<br/><br/>
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+OF THIS SOFTWARE.
+        </div>
+        <div>
+          <div class="licenseLine">
+            <span class="licenseName">semver@5.5.0</span>, Copyright https:&#x2F;&#x2F;github.com&#x2F;npm&#x2F;node-semver#readme
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="licenseHeader">
+          <div class="marginRight">2</div>
+          <div>Third party libraries using the MIT license</div>
+        </div>
+        <div class="licenseText">
+          Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom
+the Software is furnished to do so, subject to the following conditions:
+<br/><br/>
+The above copyright notice and this permission notice shall be included
+in all copies or substantial portions of the Software.
+<br/><br/>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+        </div>
+        <div>
+          <div class="licenseLine">
+            <span class="licenseName">@volumegraphics&#x2F;license-info-collector@1.0.2</span>, Copyright Volume Graphics GmbH
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">argv-tools@0.1.1</span>, Copyright Lloyd Brookes
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">array-back@2.0.0</span>, Copyright Lloyd Brookes
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">command-line-args@5.0.2</span>, Copyright Lloyd Brookes
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">find-replace@2.0.1</span>, Copyright Lloyd Brookes
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">lodash.camelcase@4.3.0</span>, Copyright John-David Dalton
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">mustache@2.3.0</span>, Copyright mustache.js Authors
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">test-value@3.0.0</span>, Copyright Lloyd Brookes
+          </div>
+          <div class="licenseLine">
+            <span class="licenseName">typical@2.6.1</span>, Copyright Lloyd Brookes
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="pageFooter" class="footer">
+    <div class="copyright">
+      End of license document
+    </div>
+  </div>
+</body>
+
+</html>

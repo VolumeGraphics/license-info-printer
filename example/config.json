@@ -1,0 +1,68 @@
+{
+  "licenses" : [
+    {
+      "name": "Apache-2.0",
+      "file": "apache2.txt"
+    },
+    {
+      "name": "BSD-2-Clause",
+      "file": "bsd2clause.txt"
+    },
+    {
+      "name": "BSD-3-Clause",
+      "file": "bsd3clause.txt"
+    },    
+    {
+      "name": "CC0-1.0",
+      "file": "cc0-10.txt"
+    },
+    {
+      "name": "CC-BY-3.0",
+      "file": "ccby30.txt"
+    },
+    {
+      "name": "CC-BY-4.0",
+      "file": "ccby40.txt"
+    },    
+    {
+      "name": "ISC",
+      "file": "isc.txt"
+    },
+    {
+      "name": "MIT",
+      "file": "mit.txt"
+    },
+    {
+      "name": "Public Domain"
+    },
+    {
+      "name": "Unlicense"
+    },
+    {
+      "name": "WTFPL"
+    }
+  ],
+  "overrides" : {
+    "homepage" : [
+      {
+        "name": "indexof",
+        "version": "0.0.1",
+        "new" : "https://www.npmjs.com/package/indexof"
+      }
+    ],
+    "license" : [
+      {
+        "name": "indexof",
+        "version": "0.0.1",
+        "new" : "MIT",
+        "comment" : "According to the npm page"
+      },
+      {
+        "name": "json-schema",
+        "version": "0.2.3",
+        "new" : "BSD-3-Clause",
+        "comment" : "Per the git page this library may be used under the 3-clause BSD license"
+      }
+    ]
+  }
+}

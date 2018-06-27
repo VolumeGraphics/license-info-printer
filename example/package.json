@@ -1,0 +1,20 @@
+{
+  "name": "@volumegraphics/license-info-printer-example",
+  "version": "1.0.0",
+  "description": "Example usage of license-info-printer",
+  "scripts": {
+    "license-info-printer": "license-info-printer --productPackageJsonFile package.json --productNodeModulesPaths ./node_modules --licenseFilesPath ./license_files --configFilePath config.json  --mustacheHtmlTemplate template.html --errorLogFile out/license_error.txt --documentFile out/licenses.html"
+  },
+  "author": "Volume Graphics GmbH",
+  "homepage": "https://www.volumegraphics.com/",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/VolumeGraphics/license-info-printer.git"
+  },
+  "dependencies": {
+    "@volumegraphics/license-info-printer": "^1.0.0",
+    "json-schema": "^0.2.3",
+    "indexof": "^0.0.1"
+  }
+}
