@@ -5,22 +5,7 @@ Collects license information of all third-party dependencies of your module and 
 # Install
 `npm install --save "@volumegraphics/license-info-printer"`
 # Example
-A usage example can be installed from:
-
-`npm install --save "@volumegraphics/license-info-printer-example"`
-
-navigate to the install directory and call:
-
-`npm install`
-
-Now you can print all license information by calling:
-
-`npm run license-info-printer`
-
-A `licenses.html` will be generated for you in the example root directory.
-Look into the `package.json` if you want to see how the license-info-printer example was setuped.
-The example uses the Command Line Interface. If you want to embed it into your code see section **Use as library**.
-
+An example can be found here: [@volumegraphics/license-info-printer-example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example)
 # Command Line Interface
 You can run the `license-info-printer` command from the `node_modules/.bin` directory.
 The following arguments are required in order to run the license-info-printer CLI:
