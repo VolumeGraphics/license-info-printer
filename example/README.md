@@ -3,6 +3,8 @@
 
 Example for @volumegraphics/license-info-printer. It reads and prints the dependencies of the example itself.
 
+![example](https://raw.githubusercontent.com/VolumeGraphics/license-info-printer/master/example/example.gif)
+
 # Run example
 Navigate to the installation directory and call:
 
