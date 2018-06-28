@@ -1,7 +1,7 @@
 
 
 # @volumegraphics/license-info-printer
-Collects license information of all third-party dependencies of your module and prints it to a nice html.
+Collects license information of all third-party dependencies of your module and prints it to a nice html document.
 # Install
 `npm install --save "@volumegraphics/license-info-printer"`
 # Example
@@ -11,12 +11,12 @@ You can run the `license-info-printer` command from the `node_modules/.bin` dire
 The following arguments are required in order to run the license-info-printer CLI:
 
  - **productPackageJsonFile**: Path to your package.json file of your product. The `dependencies`, `devDependencies` and `optionalDependencies` fields in your `package.json` are all considered to be valid dependencies of your product.
- - **productNodeModulesPaths**: Path to all `node_modules` folder that your product depends on. Separate multiple folders with `;`
- - **licenseFilesPath**: Directory with your license files
- - **configFilePath**: Configuration file of license-to-document file. The config file is used to set valid licenses, set missing information or overwrite incorrect information of some modules. See **Config File** section.
- - **mustacheHtmlTemplate**: A html template file based on "mustache" template engine that is used to print your html-license file. See **Template** section.
+ - **productNodeModulesPaths**: Path to all `node_modules` folder that your product depends on. Separate multiple folder paths with `;`
+ - **licenseFilesPath**: Directory containing all your license files
+ - **configFilePath**: Location of the config file. It is used to set valid licenses, set missing information or overwrite incorrect information of some modules. See **config.json Structure** section.
+ - **mustacheHtmlTemplate**: A html template file based on "mustache" template engine that is used to print your html-license file. See **HTML template** section.
  - **errorLogFile**: File location of the error log file.
- - **documentFile**: File location of generated document.
+ - **documentFile**: File location of the generated html document.
 
 Console printings will notify you if an error occured.
 # Use as library
@@ -40,9 +40,9 @@ if(typeof  html  !==  "string") {
 }
 
 ```
-# Config File Structure
-See the **Example** for a real world usage.
-```json
+# config.json Structure
+You can use the `config.json` from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as a template.
+```js
 {
   "licenses" : [ // set of allowed licenses
     {
@@ -69,27 +69,27 @@ See the **Example** for a real world usage.
   }
 }
 ```
-# HTML Template
-The HTML Template is written setuped with the template engine "mustache". See https://www.npmjs.com/package/mustache on how to use it.
-Data layout for the template
-```json
+# HTML template
+The HTML Template is written setuped with the template engine "mustache". See https://www.npmjs.com/package/mustache on how to configure it.
+Data layout for the template:
+```js
 {
 	licenses: [
 		{
-			index: <Array index of license>,
-			name: <Name of license>,
-			licenseText: <The license text>,
+			index: "<Array index of license>",
+			name: "<Name of license>",
+			licenseText: "<The license text>",
 			libraries: [
-				name: <Library name>,
-				version: <Library version>,
-				copyright: <Copyright holder of the library>
+				name: "<Library name>",
+				version: "<Library version>",
+				copyright: "<Copyright holder of the library>"
 			]
 		}
 	]
 }
 ```
-See the **Example** for a real world usage.
-# More Control needed
+You can use the `template.html` file from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as a template.
+# More control required
 If you want to have more control over your license evaluations, have a look at the following library:
 https://www.npmjs.com/package/@volumegraphics/license-info-collector
 The license-info-printer uses this library under the hood.
