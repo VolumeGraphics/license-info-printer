@@ -96,11 +96,19 @@ export function toHtml(
     const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses, evaluateCopyRightInfo);
     const missingPackages = findMissingPackages(packageInfos);
     
+    const hasMissingDependenciesFn = () => {
+      for (let m of missingPackages) {
+        if (Object.keys(m.missingDependencies).length > 0)
+          return true;
+      }
+      return false;
+    }
+  
     if(  invalidInfo.license.length != 0 
       || invalidInfo.copyright.length != 0 
       || invalidOverrides.homepage.length != 0 
       || invalidOverrides.license.length != 0
-      || missingPackages.length != 0) {
+      || hasMissingDependenciesFn() ) {
     
       const libId = (p: PackageContent | Override) => {
         return p.name + "@" + p.version;
@@ -150,8 +158,6 @@ export function toHtml(
         error("\nThe following packages are missing:");
         for (let m of missingPackages) {
           printMissingDependencyErrors(m.missingDependencies);
-          printMissingDependencyErrors(m.missingDevDependencies);
-          printMissingDependencyErrors(m.missingOptionalDependencies);
         }
       }
     
