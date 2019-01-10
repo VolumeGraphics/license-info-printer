@@ -1,5 +1,5 @@
 import * as fs from 'fs'
-import {findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author} from '@volumegraphics/license-info-collector'
+import {Dependency, findMissingPackages, findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author} from '@volumegraphics/license-info-collector'
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections, License, LicenseSection} from '@volumegraphics/license-info-collector'
 import * as mustache from 'mustache'
@@ -94,11 +94,13 @@ export function toHtml(
     applyOverrides(packageInfos, config.overrides);
     const invalidOverrides = findUnusedOverrides(packageInfos, config.overrides);
     const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses, evaluateCopyRightInfo);
+    const missingPackages = findMissingPackages(packageInfos);
     
     if(  invalidInfo.license.length != 0 
       || invalidInfo.copyright.length != 0 
       || invalidOverrides.homepage.length != 0 
-      || invalidOverrides.license.length != 0 ) {
+      || invalidOverrides.license.length != 0
+      || missingPackages.length != 0) {
     
       const libId = (p: PackageContent | Override) => {
         return p.name + "@" + p.version;
@@ -109,6 +111,11 @@ export function toHtml(
       };
       const error = (s: string) => {
         e.message.push(s + "\n");
+      }
+      const printMissingDependencyErrors = (missing: Dependency) => {
+        for (let productName in missing) {
+          error(productName + "@" + missing[productName]);
+        }
       }
     
       if(invalidInfo.license.length != 0) {
@@ -138,10 +145,20 @@ export function toHtml(
           error(libId(o));
         }
       }
+
+      if (missingPackages.length != 0) {
+        error("\nThe following packages are missing:");
+        for (let m of missingPackages) {
+          printMissingDependencyErrors(m.missingDependencies);
+          printMissingDependencyErrors(m.missingDevDependencies);
+          printMissingDependencyErrors(m.missingOptionalDependencies);
+        }
+      }
     
       return e;
     }
 
+    packageInfos.pop();
     const licenseSections = gatherLicenseSections(packageInfos, config.licenses, licenseFilesPath);
     return _toHtml(licenseSections, mustacheHtmlTemplate);
 }
