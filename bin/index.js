@@ -41,6 +41,12 @@ const options = [
   {
     name: 'documentFile',
     summary: 'File location of generated document'
+  },
+  {
+    name: 'disableNpmVersionCheck',
+    summary: 'Disables the npm version check. It simply compares two version strings instead.',
+    type: Boolean,
+    defaultValue: false
   }
 ];
 
@@ -56,7 +62,8 @@ const html = ltd.toHtml(
   cli.productNodeModulesPaths,
   cli.licenseFilesPath,
   cli.configFilePath,
-  cli.mustacheHtmlTemplate
+  cli.mustacheHtmlTemplate,
+  cli.disableNpmVersionCheck
 );
 
 if(typeof html !== "string") {

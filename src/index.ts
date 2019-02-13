@@ -86,15 +86,16 @@ export function toHtml(
   licenseFilesPath: string, 
   configFilePath: string,
   mustacheHtmlTemplate: string,
+  disableNpmVersionCheck: boolean
   ) {
 
-    let packageInfos = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths);
+    let packageInfos = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
 
     const config:Config = JSON.parse(fs.readFileSync(configFilePath).toString());
     applyOverrides(packageInfos, config.overrides);
     const invalidOverrides = findUnusedOverrides(packageInfos, config.overrides);
     const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses, evaluateCopyRightInfo);
-    const missingPackages = findMissingPackages(packageInfos);
+    const missingPackages = findMissingPackages(packageInfos, disableNpmVersionCheck);
     
     const hasMissingDependenciesFn = () => {
       for (let m of missingPackages) {
