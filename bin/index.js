@@ -9,7 +9,8 @@ function printErrors(errorObj) {
     content += m;
   }
   console.error(content);
-  fs.writeFileSync(cli.errorLogFile, content);
+  if(cli.errorLogFile)
+    fs.writeFileSync(cli.errorLogFile, content);
 }
 
 const options = [
