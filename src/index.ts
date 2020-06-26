@@ -141,14 +141,14 @@ export function toHtml(
       }
     
       if(invalidInfo.copyright.length != 0) {
-        error("\nThe following copyrights are incorrect:");
+        error("\nThe following copyrights/homepage are incorrect:");
         for(let l of invalidInfo.copyright) {
           error(libId(l) + " | copyright: " + copyrightInfo(l) + " | " + l.packageJson[0]);
         }
       }
     
       if(invalidOverrides.homepage.length != 0 && errorLevel.redundantHomepageOverrides === "error") {
-        error("\nThe following hompage overrides are redundant:");
+        error("\nThe following homepage overrides are redundant:");
         for(let o of invalidOverrides.homepage) {
           error(libId(o));
         }
