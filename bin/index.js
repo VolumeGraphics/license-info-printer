@@ -2,6 +2,7 @@
 const ltd = require("@volumegraphics/license-info-printer");
 const fs = require("fs");
 const commandLineArgs = require('command-line-args');
+const process = require("process");
 
 function printErrors(errorObj) {
   let content = "";
@@ -69,8 +70,7 @@ const html = ltd.toHtml(
 
 if(typeof html !== "string") {
   printErrors(html);
-  return 1;
+  process.exit(1);
 }
 
 fs.writeFileSync(cli.documentFile, html);
-return 0;
