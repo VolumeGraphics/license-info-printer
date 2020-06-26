@@ -49,6 +49,18 @@ const options = [
     summary: 'Disables the npm version check. It simply compares two version strings instead.',
     type: Boolean,
     defaultValue: false
+  },
+  {
+    name: 'errorLevelRedundantHomepageOverrides',
+    summary: 'Treatment of redundant hompage overrides. Possible values are: error | suppress.',
+    type: String,
+    defaultValue: 'error'
+  },
+  {
+    name: 'errorLevelRedundantLicenseOverrides',
+    summary: 'Treatment of redundant license overrides. Possible values are: error | suppress.',
+    type: String,
+    defaultValue: 'error'
   }
 ];
 
@@ -65,7 +77,11 @@ const html = ltd.toHtml(
   cli.licenseFilesPath,
   cli.configFilePath,
   cli.mustacheHtmlTemplate,
-  cli.disableNpmVersionCheck
+  cli.disableNpmVersionCheck,
+  {
+    redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
+    redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
+  }
 );
 
 if(typeof html !== "string") {

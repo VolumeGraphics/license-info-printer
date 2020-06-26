@@ -80,13 +80,19 @@ function _toHtml(licenseSections: LicenseSection[], mustacheHtmlTemplate: string
   return mustache.render(fs.readFileSync(mustacheHtmlTemplate).toString(), {licenses: mustacheData});
 }
 
+type ErrorLevel = "error" | "suppress";
+
 export function toHtml(
   productPackageJsonFile: string, 
   productNodeModulesPaths: string[], 
   licenseFilesPath: string, 
   configFilePath: string,
   mustacheHtmlTemplate: string,
-  disableNpmVersionCheck: boolean
+  disableNpmVersionCheck: boolean,
+  errorLevel: {
+    redundantHomepageOverrides: ErrorLevel,
+    redundantLicenseOverrides: ErrorLevel
+  }
   ) {
 
     let packageInfos = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
@@ -107,8 +113,8 @@ export function toHtml(
   
     if(  invalidInfo.license.length != 0 
       || invalidInfo.copyright.length != 0 
-      || invalidOverrides.homepage.length != 0 
-      || invalidOverrides.license.length != 0
+      || (invalidOverrides.homepage.length != 0 && errorLevel.redundantHomepageOverrides === "error")
+      || (invalidOverrides.license.length != 0 && errorLevel.redundantLicenseOverrides === "error")
       || hasMissingDependenciesFn() ) {
     
       const libId = (p: PackageContent | Override) => {
@@ -141,14 +147,14 @@ export function toHtml(
         }
       }
     
-      if(invalidOverrides.homepage.length != 0) {
+      if(invalidOverrides.homepage.length != 0 && errorLevel.redundantHomepageOverrides === "error") {
         error("\nThe following hompage overrides are redundant:");
         for(let o of invalidOverrides.homepage) {
           error(libId(o));
         }
       }
     
-      if(invalidOverrides.license.length != 0) {
+      if(invalidOverrides.license.length != 0 && errorLevel.redundantLicenseOverrides === "error") {
         error("\nThe following license overrides are redundant:");
         for(let o of invalidOverrides.license) {
           error(libId(o));
