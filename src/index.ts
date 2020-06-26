@@ -148,7 +148,7 @@ export function toHtml(
       }
     
       if(invalidOverrides.homepage.length != 0 && errorLevel.redundantHomepageOverrides === "error") {
-        error("\nThe following homepage overrides are redundant:");
+        error("\nThe following copyrights/homepage overrides are redundant:");
         for(let o of invalidOverrides.homepage) {
           error(libId(o));
         }
