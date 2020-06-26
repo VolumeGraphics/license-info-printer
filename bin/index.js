@@ -8,7 +8,7 @@ function printErrors(errorObj) {
   for(let m of errorObj.message) {
     content += m;
   }
-  console.log(content);
+  console.error(content);
   fs.writeFileSync(cli.errorLogFile, content);
 }
 
@@ -68,7 +68,8 @@ const html = ltd.toHtml(
 
 if(typeof html !== "string") {
   printErrors(html);
-  return;
+  return 1;
 }
 
 fs.writeFileSync(cli.documentFile, html);
+return 0;
