@@ -1,29 +1,38 @@
 import * as fs from 'fs'
-import {Dependency, findMissingPackages, findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author} from '@volumegraphics/license-info-collector'
+import * as path from 'path'
+import {Dependency, findMissingPackages, findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author, attachMeta, LicenseSectionWithMeta} from '@volumegraphics/license-info-collector'
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
-import {gatherLicenseSections, License, LicenseSection} from '@volumegraphics/license-info-collector'
+import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as mustache from 'mustache'
-// import {toHtml} from './html'
 
-interface Config {
+type License = {
+  file?: string;
+  name: string;
+}
+
+type Config = {
   overrides: Overrides;
   licenses: License[];
 }
 
-interface LibraryTemplate {
+type LibraryTemplate = {
   name: string,
   copyright: string,
   data: PackageContent
 }
 
-interface HtmlTemplate {
+type HtmlTemplate = {
   index: number,
   name: string,
   licenseText: string,
   libraries: LibraryTemplate []
 }
 
-export interface ErrorMessages {
+type LicenseText = {
+  licenseText: string;
+}
+
+export type ErrorMessages = {
   message: string[]
 }
 
@@ -56,26 +65,28 @@ function evaluateCopyRightInfo(p:PackageContent) {
   return copyrightInfo(p) !== undefined;
 }
 
-function _toHtml(licenseSections: LicenseSection[], mustacheHtmlTemplate: string) {
+function _toHtml(licenseSections: LicenseSectionWithMeta<LicenseText>[], mustacheHtmlTemplate: string) {
   let i:number = 0;
-  const mustacheData = licenseSections.filter((l: LicenseSection) => {
-    return l.licenseText !== undefined;
-  }).map((l:LicenseSection) => {
-    const template: HtmlTemplate = {
-      index: ++i,
-      name: l.license,
-      licenseText: l.licenseText,
-      libraries: l.libraries.map((p: PackageContent) => {
-        return {
-          name: p.name,
-          version: p.version,
-          copyright: copyrightInfo(p),
-          data: p
-        }
-      })
-    }
-    return template;
-  });
+  const mustacheData = licenseSections
+    .map(l => {
+      if(l.meta === undefined)
+        throw "License text is missing";
+
+      const template: HtmlTemplate = {
+        index: ++i,
+        name: l.licenseName,
+        licenseText: l.meta.licenseText,
+        libraries: l.libraries.map((p: PackageContent) => {
+          return {
+            name: p.name,
+            version: p.version,
+            copyright: copyrightInfo(p),
+            data: p
+          }
+        })
+      }
+      return template;
+    });
 
   return mustache.render(fs.readFileSync(mustacheHtmlTemplate).toString(), {licenses: mustacheData});
 }
@@ -100,7 +111,7 @@ export function toHtml(
     const config:Config = JSON.parse(fs.readFileSync(configFilePath).toString());
     applyOverrides(packageInfos, config.overrides);
     const invalidOverrides = findUnusedOverrides(packageInfos, config.overrides);
-    const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses, evaluateCopyRightInfo);
+    const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses.map(l => l.name), evaluateCopyRightInfo);
     const missingPackages = findMissingPackages(packageInfos, disableNpmVersionCheck);
     
     const hasMissingDependenciesFn = () => {
@@ -172,6 +183,20 @@ export function toHtml(
     }
 
     packageInfos.pop();
-    const licenseSections = gatherLicenseSections(packageInfos, config.licenses, licenseFilesPath);
-    return _toHtml(licenseSections, mustacheHtmlTemplate);
+    const licenseSections = gatherLicenseSections(packageInfos);
+
+    const meta = config.licenses
+      .filter((l) => l.file !== undefined && fs.existsSync(l.file))
+      .map((l) => ({
+        licenseName: l.name,
+        meta: {
+          licenseText: fs
+            .readFileSync(path.join(licenseFilesPath, l.file))
+            .toString()
+        },
+      }));
+
+    const licenseWithMeta = attachMeta(licenseSections, meta);
+
+    return _toHtml(licenseWithMeta, mustacheHtmlTemplate);
 }
