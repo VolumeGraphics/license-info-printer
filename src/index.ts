@@ -183,20 +183,22 @@ export function toHtml(
     }
 
     packageInfos.pop();
-    const licenseSections = gatherLicenseSections(packageInfos);
+    const licenseFilePath = (file: string) => path.join(licenseFilesPath, file);
 
     const meta = config.licenses
-      .filter((l) => l.file !== undefined && fs.existsSync(l.file))
-      .map((l) => ({
-        licenseName: l.name,
-        meta: {
-          licenseText: fs
-            .readFileSync(path.join(licenseFilesPath, l.file))
-            .toString()
-        },
-      }));
-
-    const licenseWithMeta = attachMeta(licenseSections, meta);
+    .filter((l) => l.file !== undefined && fs.existsSync(licenseFilePath(l.file)))
+    .map((l) => ({
+      licenseName: l.name,
+      meta: {
+        licenseText: fs
+        .readFileSync(licenseFilePath(l.file))
+        .toString()
+      },
+    }));
+    
+    const licenseSections = gatherLicenseSections(packageInfos);
+    const licenseWithMeta = attachMeta(licenseSections, meta)
+      .filter(l => meta.find(m => m.licenseName === l.licenseName));
 
     return _toHtml(licenseWithMeta, mustacheHtmlTemplate);
 }
