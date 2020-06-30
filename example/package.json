@@ -13,8 +13,8 @@
     "url": "https://github.com/VolumeGraphics/license-info-printer.git"
   },
   "dependencies": {
-    "@volumegraphics/license-info-printer": "^1.1.0",
-    "json-schema": "^0.2.3",
-    "indexof": "^0.0.1"
+    "@volumegraphics/license-info-printer": "^2.0.1",
+    "indexof": "^0.0.1",
+    "json-schema": "^0.2.3"
   }
 }
