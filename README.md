@@ -8,15 +8,24 @@ Collects license information of all third-party dependencies of your module and 
 An example can be found here: [@volumegraphics/license-info-printer-example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example)
 # Command Line Interface
 You can run the `license-info-printer` command from the `node_modules/.bin` directory.
-The following arguments are required in order to run the license-info-printer CLI:
+The CLI can be integrated into your product build chain. The process will return an error code and error message if it fails and interrupt your build process.
 
- - **productPackageJsonFile**: Path to your package.json file of your product. The `dependencies`, `devDependencies` and `optionalDependencies` fields in your `package.json` are all considered to be valid dependencies of your product.
- - **productNodeModulesPaths**: Path to all `node_modules` folder that your product depends on. Separate multiple folder paths with `;`
- - **licenseFilesPath**: Directory containing all your license files
- - **configFilePath**: Location of the config file. It is used to set valid licenses, set missing information or overwrite incorrect information of some modules. See **config.json Structure** section.
- - **mustacheHtmlTemplate**: A html template file based on "mustache" template engine that is used to print your html-license file. See **HTML template** section.
- - **errorLogFile**: File location of the error log file.
- - **documentFile**: File location of the generated html document.
+The following arguments are available to the license-info-printer CLI:
+
+## Arguments ##
+
+|Argument|Required|Description|
+|:-------|:-------|:----------|
+|productPackageJsonFile | X | File path to your package.json file of your product. The `dependencies`, `devDependencies` and `optionalDependencies` fields in your `package.json` are all considered to be valid dependencies of your product |
+|productNodeModulesPaths | X | Directory paths to all `node_modules` folder that your product depends on. Separate multiple folder paths with `;` |
+|licenseFilesPath | X | Directory folder path containing all your license files |
+|configFilePath | X | File path location of the config file. It is used to validate licenses, complete missing license information or overwrite incorrect license information of some modules. See **config.json Structure** section. |
+|mustacheHtmlTemplate | X | A html template file based on "mustache" template engine that is used to print your html-license file. See **HTML template** section. |
+|documentFile | X | File path location to the generated html document. |
+|errorLogFile |   | File path location to the error log file. |
+|disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
+|errorLevelRedundantHomepageOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a hompage override for a license in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
+|errorLevelRedundantLicenseOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a license override in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
 
 Console printings will notify you if an error occured.
 # Use as library
@@ -28,11 +37,17 @@ import * as lip from "@volumegraphics/license-info-printer";
 ... // set toHtml arguments here. See CLI section for arguments.
 
 lip.toHtml(
-	productPackageJsonFile, 
-	productNodeModulesPaths, 
-	licenseFilesPath,
-	configFilePath,
-	mustacheHtmlTemplate);
+  productPackageJsonFile, 
+  productNodeModulesPaths, 
+  licenseFilesPath,
+  configFilePath,
+  mustacheHtmlTemplate,
+  disableNpmVersionCheck,
+  errorLevel: {
+    redundantHomepageOverrides,
+    redundantLicenseOverrides
+  }
+);
 	
 if(typeof  html  !==  "string") {
 	doSomethingWithErrors(html); // html object as error object.
@@ -41,7 +56,7 @@ if(typeof  html  !==  "string") {
 
 ```
 # config.json Structure
-You can use the `config.json` from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as a template.
+You can use the `config.json` from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as template.
 ```js
 {
   "licenses" : [ // set of allowed licenses
@@ -70,26 +85,26 @@ You can use the `config.json` from the [Example](https://www.npmjs.com/package/@
 }
 ```
 # HTML template
-The HTML Template is written setuped with the template engine "mustache". See https://www.npmjs.com/package/mustache on how to configure it.
-Data layout for the template:
+The HTML Template uses the template engine "mustache". See https://www.npmjs.com/package/mustache on how to configure it.
+Data layout for the mustache template:
 ```js
 {
-	licenses: [
-		{
-			index: "<Array index of license>",
-			name: "<Name of license>",
-			licenseText: "<The license text>",
-			libraries: [
-				name: "<Library name>",
-				version: "<Library version>",
-				copyright: "<Copyright holder of the library>"
-			]
-		}
-	]
+  licenses: [
+  {
+    index: "<Array index of license>",
+    name: "<Name of license>",
+    licenseText: "<The license text>",
+      libraries: [
+        name: "<Library name>",
+        version: "<Library version>",
+        copyright: "<Copyright holder of the library>"
+      ]
+    }
+  ]
 }
 ```
-You can use the `template.html` file from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as a template.
+You can use the `template.html` file from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as template.
 # More control required
-If you want to have more control over your license evaluations, have a look at the following library:
-https://www.npmjs.com/package/@volumegraphics/license-info-collector
+If you want to have more control over your license evaluations, have a look at
+[@volumegraphics/license-info-collector](https://www.npmjs.com/package/@volumegraphics/license-info-collector)
 The license-info-printer uses this library under the hood.
