@@ -1,6 +1,6 @@
 {
   "name": "@volumegraphics/license-info-printer-example",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Example usage of license-info-printer",
   "scripts": {
     "license-info-printer": "license-info-printer --productPackageJsonFile package.json --productNodeModulesPaths ./node_modules --licenseFilesPath ./license_files --configFilePath config.json  --mustacheHtmlTemplate template.html --errorLogFile license_error.txt --documentFile licenses.html"
