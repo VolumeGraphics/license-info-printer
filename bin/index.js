@@ -84,9 +84,11 @@ const html = ltd.toHtml(
   }
 );
 
-if(typeof html !== "string") {
+if (html.type === "Error") {
   printErrors(html);
   process.exit(1);
 }
 
-fs.writeFileSync(cli.documentFile, html);
+html.warnings.length.array.forEach(warning => console.warn(warning));
+
+fs.writeFileSync(cli.documentFile, html.html);
