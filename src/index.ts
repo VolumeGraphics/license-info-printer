@@ -160,35 +160,35 @@ export function toHtml(
     }
   
     if(invalidInfo.license.length != 0) {
-      error("\nThe following licenses are not allowed:");
+      error("\nThe following licenses are not allowed (define a license override in the config.json to solve this issue):");
       for(let l of invalidInfo.license) {
         error(libId(l) + " | license: " + l.license + " | " + l.packageJson[0]);
       }
     }
   
     if(invalidInfo.copyright.length != 0) {
-      error("\nThe following copyrights/homepage are incorrect:");
+      error("\nThe following copyrights/homepage are incorrect (define a hompage override in the config.json to solve this issue):");
       for(let l of invalidInfo.copyright) {
         error(libId(l) + " | copyright: " + copyrightInfo(l) + " | " + l.packageJson[0]);
       }
     }
   
     if(invalidOverrides.homepage.length != 0 && errorLevel.redundantHomepageOverrides === "error") {
-      error("\nThe following copyrights/homepage overrides are redundant:");
+      error("\nThe following copyrights/homepage overrides are redundant (remove these unused hompage override in the config.json to solve this issue):");
       for(let o of invalidOverrides.homepage) {
         error(libId(o));
       }
     }
   
     if(invalidOverrides.license.length != 0 && errorLevel.redundantLicenseOverrides === "error") {
-      error("\nThe following license overrides are redundant:");
+      error("\nThe following license overrides are redundant (remove these unused license override in the config.json to solve this issue):");
       for(let o of invalidOverrides.license) {
         error(libId(o));
       }
     }
 
     if (missingPackages.length != 0) {
-      error("\nThe following packages are missing:");
+      error("\nThe following packages are missing (install missing dependencies with npm install/ci to solve this issue):");
       for (let m of missingPackages) {
         printMissingDependencyErrors(m.missingDependencies);
       }
