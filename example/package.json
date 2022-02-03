@@ -8,6 +8,9 @@
   "author": "Volume Graphics GmbH",
   "homepage": "https://www.volumegraphics.com/",
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/VolumeGraphics/license-info-printer.git"
