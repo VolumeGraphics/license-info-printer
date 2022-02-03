@@ -89,6 +89,6 @@ if (html.type === "Error") {
   process.exit(1);
 }
 
-html.warnings.length.array.forEach(warning => console.warn(warning));
+html.warnings.forEach(warning => console.warn(warning));
 
 fs.writeFileSync(cli.documentFile, html.html);
