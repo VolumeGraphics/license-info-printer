@@ -18,6 +18,6 @@
   "dependencies": {
     "@volumegraphics/license-info-printer": "^3.0.1",
     "indexof": "^0.0.1",
-    "json-schema": "^0.2.3"
+    "json-schema": "^0.4.0"
   }
 }
