@@ -204,7 +204,10 @@ export function toHtml(
   }
 
   const licenseTextModifier = licenseEncoding === LicenseEncoding.JsonString
-    ? (s: string) => s.replaceAll('"', '\\"')
+    ? (s: string) => {
+      const r = s.replaceAll('"', '\\"');
+      return r.replace(/(\r\n|\n|\r)/gm, " ");
+    }
     : (s: string) => s;
 
   packageInfos.pop();
