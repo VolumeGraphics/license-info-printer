@@ -37,6 +37,11 @@ export enum ResultType {
   Html = "Html"
 }
 
+export enum LicenseEncoding {
+  None = "None",
+  JsonString = "JsonString"
+}
+
 export type ErrorMessages = {
   type: ResultType.Error,
   message: string[]
@@ -112,6 +117,7 @@ export function toHtml(
   configFilePath: string,
   mustacheHtmlTemplate: string,
   disableNpmVersionCheck: boolean,
+  licenseEncoding: LicenseEncoding,
   errorLevel: {
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
@@ -197,6 +203,10 @@ export function toHtml(
     return e;
   }
 
+  const licenseTextModifier = licenseEncoding === LicenseEncoding.JsonString
+    ? (s: string) => s.replaceAll('"', '\\"')
+    : (s: string) => s;
+
   packageInfos.pop();
   const licenseFilePath = (file: string) => path.join(licenseFilesPath, file);
 
@@ -205,9 +215,9 @@ export function toHtml(
   .map((l) => ({
     licenseName: l.name,
     meta: {
-      licenseText: fs
-      .readFileSync(licenseFilePath(l.file))
-      .toString()
+      licenseText: licenseTextModifier(
+        fs.readFileSync(licenseFilePath(l.file)).toString()
+      )
     },
   }));
   

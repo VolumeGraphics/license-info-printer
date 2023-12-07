@@ -51,6 +51,12 @@ const options = [
     defaultValue: false
   },
   {
+    name: 'licenseTextModifier',
+    summary: 'Modify the license content before applying it to the template. Valid options are "None" and "JsonString". "JsonString" will encode double quotes.',
+    type: String,
+    defaultValue: 'None'
+  },
+  {
     name: 'errorLevelRedundantHomepageOverrides',
     summary: 'Treatment of redundant hompage overrides. Possible values are: error | suppress.',
     type: String,
@@ -78,6 +84,7 @@ const html = ltd.toHtml(
   cli.configFilePath,
   cli.mustacheHtmlTemplate,
   cli.disableNpmVersionCheck,
+  cli.licenseTextModifier,
   {
     redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
     redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
