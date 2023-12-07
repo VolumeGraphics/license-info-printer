@@ -2,7 +2,7 @@
   "compilerOptions": {
     "outDir": "lib",
     "module": "commonjs",
-    "target": "es2017",
+    "target": "ES2021",
     "noImplicitAny": true,
     "jsx": "react",
     "moduleResolution": "node",

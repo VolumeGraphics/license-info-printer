@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "@types/mustache": "^0.8.30",
-    "@types/node": "^10.3.3",
-    "ts-node": "^6.0.3",
-    "typescript": "^2.8.3"
+    "@types/node": "^20.10.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
   }
 }
