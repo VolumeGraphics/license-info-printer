@@ -1,6 +1,6 @@
 {
   "name": "@volumegraphics/license-info-printer",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "description": "Collects and renders all dependant module licences of your project to a html document",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
