@@ -33,8 +33,8 @@ const options = [
     summary: 'Configuration file of license-to-document file',
   },
   {
-    name: 'mustacheHtmlTemplate', 
-    summary: 'A html template file based on "mustache" template engine that is used to print your html-license file'
+    name: 'handlebarsTemplate', 
+    summary: 'A template file based on "handlebars (mustache)" template engine that is used to print your license file'
   },
   {
     name: 'errorLogFile',
@@ -77,12 +77,12 @@ if(fs.existsSync(cli.errorLogFile))
   fs.unlinkSync(cli.errorLogFile);
 }
 
-const html = ltd.toHtml(
+const doc = ltd.toDocument(
   cli.productPackageJsonFile,
   cli.productNodeModulesPaths,
   cli.licenseFilesPath,
   cli.configFilePath,
-  cli.mustacheHtmlTemplate,
+  cli.handlebarsTemplate,
   cli.disableNpmVersionCheck,
   cli.licenseTextModifier,
   {
@@ -91,11 +91,11 @@ const html = ltd.toHtml(
   }
 );
 
-if (html.type === "Error") {
-  printErrors(html);
+if (doc.type === "Error") {
+  printErrors(doc);
   process.exit(1);
 }
 
-html.warnings.forEach(warning => console.warn(warning));
+doc.warnings.forEach(warning => console.warn(warning));
 
-fs.writeFileSync(cli.documentFile, html.html);
+fs.writeFileSync(cli.documentFile, doc.document);

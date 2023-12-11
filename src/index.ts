@@ -3,7 +3,7 @@ import * as path from 'path'
 import {Dependency, findMissingPackages, findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author, attachMeta, LicenseSectionWithMeta} from '@volumegraphics/license-info-collector'
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
-import * as mustache from 'mustache'
+import * as handlebars from 'handlebars'
 
 type License = {
   file?: string;
@@ -21,7 +21,7 @@ type LibraryTemplate = {
   data: PackageContent
 }
 
-type HtmlTemplate = {
+type HandlebarsData = {
   index: number,
   name: string,
   licenseText: string,
@@ -34,7 +34,7 @@ type LicenseText = {
 
 export enum ResultType {
   Error = "Error",
-  Html = "Html"
+  Document = "Document"
 }
 
 export enum LicenseEncoding {
@@ -47,9 +47,9 @@ export type ErrorMessages = {
   message: string[]
 }
 
-export type HtmlResult = {
-  type: ResultType.Html, 
-  html: string;
+export type DocumentResult = {
+  type: ResultType.Document, 
+  document: string;
   warnings: string[];
 }
 
@@ -82,14 +82,14 @@ function evaluateCopyRightInfo(p:PackageContent) {
   return copyrightInfo(p) !== undefined;
 }
 
-function _toHtml(licenseSections: LicenseSectionWithMeta<LicenseText>[], mustacheHtmlTemplate: string) {
+function _toDocument(licenseSections: LicenseSectionWithMeta<LicenseText>[], handlebarsTemplate: string) {
   let i:number = 0;
   const mustacheData = licenseSections
     .map(l => {
       if(l.meta === undefined)
         throw "License text is missing";
 
-      const template: HtmlTemplate = {
+      const data: HandlebarsData = {
         index: ++i,
         name: l.licenseName,
         licenseText: l.meta.licenseText,
@@ -102,27 +102,28 @@ function _toHtml(licenseSections: LicenseSectionWithMeta<LicenseText>[], mustach
           }
         })
       }
-      return template;
+      return data;
     });
 
-  return mustache.render(fs.readFileSync(mustacheHtmlTemplate).toString(), {licenses: mustacheData});
+  const template = handlebars.compile(fs.readFileSync(handlebarsTemplate).toString());
+  return template({licenses: mustacheData});
 }
 
 type ErrorLevel = "error" | "suppress";
 
-export function toHtml(
+export function toDocument(
   productPackageJsonFile: string, 
   productNodeModulesPaths: string[], 
   licenseFilesPath: string, 
   configFilePath: string,
-  mustacheHtmlTemplate: string,
+  handlebarsTemplate: string,
   disableNpmVersionCheck: boolean,
   licenseEncoding: LicenseEncoding,
   errorLevel: {
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
   }
-): HtmlResult | ErrorMessages {
+): DocumentResult | ErrorMessages {
 
   const packageInfoResults = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
 
@@ -204,10 +205,7 @@ export function toHtml(
   }
 
   const licenseTextModifier = licenseEncoding === LicenseEncoding.JsonString
-    ? (s: string) => {
-      const r = s.replaceAll('"', '\\"');
-      return r.replace(/(\r\n|\n|\r)/gm, " ");
-    }
+    ? (s: string) => JSON.stringify(s)
     : (s: string) => s;
 
   packageInfos.pop();
@@ -229,8 +227,8 @@ export function toHtml(
     .filter(l => meta.find(m => m.licenseName === l.licenseName));
 
   return {
-    type: ResultType.Html,
-    html: _toHtml(licenseWithMeta, mustacheHtmlTemplate),
+    type: ResultType.Document,
+    document: _toDocument(licenseWithMeta, handlebarsTemplate),
     warnings: packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`)
   };
 }
