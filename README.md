@@ -35,9 +35,9 @@ Example:
 ```jsx
 import * as lip from "@volumegraphics/license-info-printer";
 
-... // set toHtml arguments here. See CLI section for arguments.
+... // set toDocument arguments here. See CLI section for arguments.
 
-const doc = lip.toHtml(
+const doc = lip.toDocument(
   productPackageJsonFile,
   productNodeModulesPaths, // array type
   licenseFilesPath,
@@ -53,7 +53,7 @@ const doc = lip.toHtml(
 	
 if (doc.type === "Error") {
   for(let m of errorObj.message) {
-    console.log(m));
+    console.log(m);
   }
   return;
 }
