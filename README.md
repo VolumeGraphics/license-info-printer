@@ -20,10 +20,11 @@ The following arguments are available to the license-info-printer CLI:
 |productNodeModulesPaths | X | Directory paths to all `node_modules` folder that your product depends on. Separate multiple folder paths with `;` |
 |licenseFilesPath | X | Directory folder path containing all your license files |
 |configFilePath | X | File path location of the config file. It is used to validate licenses, complete missing license information or overwrite incorrect license information of some modules. See **config.json Structure** section. |
-|mustacheHtmlTemplate | X | A html template file based on "mustache" template engine that is used to print your html-license file. See **HTML template** section. |
+|handlebarsTemplate | X | A document template file based on "handlebars" template engine that is used to print your license file. See **Document template** section. |
 |documentFile | X | File path location to the generated html document. |
 |errorLogFile |   | File path location to the error log file. |
 |disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
+|licenseTextModifier|| Modify the license content before applying it to the template. Valid options are "None" and "JsonString". "JsonString" will encode double quotes.
 |errorLevelRedundantHomepageOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a hompage override for a license in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
 |errorLevelRedundantLicenseOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a license override in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
 
@@ -36,23 +37,28 @@ import * as lip from "@volumegraphics/license-info-printer";
 
 ... // set toHtml arguments here. See CLI section for arguments.
 
-lip.toHtml(
-  productPackageJsonFile, 
-  productNodeModulesPaths, 
+const doc = lip.toHtml(
+  productPackageJsonFile,
+  productNodeModulesPaths, // array type
   licenseFilesPath,
   configFilePath,
-  mustacheHtmlTemplate,
+  handlebarsTemplate,
   disableNpmVersionCheck,
-  errorLevel: {
+  licenseTextModifier,
+  {
     redundantHomepageOverrides,
     redundantLicenseOverrides
   }
 );
 	
-if(typeof  html  !==  "string") {
-	doSomethingWithErrors(html); // html object as error object.
-	return;
+if (doc.type === "Error") {
+  for(let m of errorObj.message) {
+    console.log(m));
+  }
+  return;
 }
+
+console.log(doc.document);
 
 ```
 # config.json Structure
@@ -84,9 +90,9 @@ You can use the `config.json` from the [Example](https://www.npmjs.com/package/@
   }
 }
 ```
-# HTML template
-The HTML Template uses the template engine "mustache". See https://www.npmjs.com/package/mustache on how to configure it.
-Data layout for the mustache template:
+# Document template
+The documents Template uses the template engine "handlebars". See https://handlebarsjs.com/ on how to configure it.
+Data layout for the handlebars template:
 ```js
 {
   licenses: [
