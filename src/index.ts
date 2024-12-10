@@ -1,9 +1,15 @@
 import * as fs from 'fs'
 import * as path from 'path'
+import * as os from 'os';
+import * as util from 'util';
+import * as cp from 'child_process';
 import {Dependency, findMissingPackages, findInvalidPackageContent, collectPackageInfos, PackageContent, Repository, Author, attachMeta, LicenseSectionWithMeta} from '@volumegraphics/license-info-collector'
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
+
+const execAsync = util.promisify(cp.exec);
+const mkdtempAsync = util.promisify(fs.mkdtemp);
 
 type License = {
   file?: string;
@@ -111,9 +117,59 @@ function _toDocument(licenseSections: LicenseSectionWithMeta<LicenseText>[], han
 
 type ErrorLevel = "error" | "suppress";
 
-export function toDocument(
+async function execDownloadCmd(downloadCmd: string, paths: string[]) {
+  
+  if (!paths.some(p => p.startsWith("<download>")))
+    return {
+      cleanup : () => {},
+      paths
+    };
+
+  let tmpDir = "";
+
+  const cleanupTempDir = (dir: string) => () => {
+    try {
+      if (dir && dir !== "") {
+        fs.rmSync(dir, { recursive: true });
+        dir = "";
+      }
+    }
+    catch (e) {}
+  }
+
+  const err = (msg: string) => {
+    cleanupTempDir(tmpDir)();
+    return msg;
+  };
+
+  if (!downloadCmd || downloadCmd === "")
+    return err("downloadCmd option is missing");
+
+  try {
+    tmpDir = await mkdtempAsync(path.join(os.tmpdir(), "re-"));
+  }
+  catch (e) {
+    return err("Could not create temp directory. " + e.message);
+  }
+
+  downloadCmd = downloadCmd.replace("<downloadDir>", tmpDir);
+
+  try {
+    await execAsync(downloadCmd);
+  } catch (e) {
+    return err("Download failed: " + e.message);
+  }
+
+  return {
+    paths: paths.map(p => p.replace("<download>", tmpDir)),
+    cleanup: cleanupTempDir(tmpDir)
+  };
+}
+
+export async function toDocument(
   productPackageJsonFile: string, 
-  productNodeModulesPaths: string[], 
+  productNodeModulesPaths: string[],
+  downloadCmd: string,
   licenseFilesPath: string, 
   configFilePath: string,
   handlebarsTemplate: string,
@@ -123,7 +179,18 @@ export function toDocument(
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
   }
-): DocumentResult | ErrorMessages {
+): Promise<DocumentResult | ErrorMessages> {
+
+  const downloadResult = await execDownloadCmd(downloadCmd, [licenseFilesPath, configFilePath, handlebarsTemplate])
+  if (typeof downloadResult === "string")
+    return {
+      type: ResultType.Error,
+      message: [downloadResult]
+    };
+
+  licenseFilesPath = downloadResult.paths[0];
+  configFilePath = downloadResult.paths[1];
+  handlebarsTemplate = downloadResult.paths[2];
 
   const packageInfoResults = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
 
@@ -200,7 +267,8 @@ export function toDocument(
         printMissingDependencyErrors(m.missingDependencies);
       }
     }
-  
+    
+    downloadResult.cleanup();
     return e;
   }
 
@@ -212,23 +280,25 @@ export function toDocument(
   const licenseFilePath = (file: string) => path.join(licenseFilesPath, file);
 
   const meta = config.licenses
-  .filter((l) => l.file !== undefined && fs.existsSync(licenseFilePath(l.file)))
-  .map((l) => ({
-    licenseName: l.name,
-    meta: {
-      licenseText: licenseTextModifier(
-        fs.readFileSync(licenseFilePath(l.file)).toString()
-      )
-    },
-  }));
+    .filter((l) => l.file !== undefined && fs.existsSync(licenseFilePath(l.file)))
+    .map((l) => ({
+      licenseName: l.name,
+      meta: {
+        licenseText: licenseTextModifier(
+          fs.readFileSync(licenseFilePath(l.file)).toString()
+        )
+      },
+    }));
   
   const licenseSections = gatherLicenseSections(packageInfos);
   const licenseWithMeta = attachMeta(licenseSections, meta)
     .filter(l => meta.find(m => m.licenseName === l.licenseName));
 
+  const document = _toDocument(licenseWithMeta, handlebarsTemplate);
+  downloadResult.cleanup();
   return {
     type: ResultType.Document,
-    document: _toDocument(licenseWithMeta, handlebarsTemplate),
+    document,
     warnings: packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`)
   };
 }

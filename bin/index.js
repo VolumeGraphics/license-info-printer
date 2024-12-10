@@ -25,16 +25,20 @@ const options = [
     multiple: true
   },
   {
+    name: 'downloadCmd', 
+    summary: 'A commandline that will be executed before license generation to download files for license generation. The placeholder <downloadDir> defines the directory where the command should download its files.'
+  },
+  {
     name: 'licenseFilesPath', 
-    summary: 'Directory with your license files',
+    summary: 'Directory with your license files. The path can be prefixed with <download> to access downloaded files (see downloadCmd option).',
   },
   {
     name: 'configFilePath', 
-    summary: 'Configuration file of license-to-document file',
+    summary: 'Configuration file of license-to-document file. The path can be prefixed with <download> to access downloaded files (see downloadCmd option).',
   },
   {
     name: 'handlebarsTemplate', 
-    summary: 'A template file based on "handlebars (mustache)" template engine that is used to print your license file'
+    summary: 'A template file based on "handlebars (mustache)" template engine that is used to print your license file. The path can be prefixed with <download> to access downloaded files (see downloadCmd option).'
   },
   {
     name: 'errorLogFile',
@@ -42,7 +46,7 @@ const options = [
   },
   {
     name: 'documentFile',
-    summary: 'File location of generated document'
+    summary: 'File location of the generated document'
   },
   {
     name: 'disableNpmVersionCheck',
@@ -70,32 +74,37 @@ const options = [
   }
 ];
 
-const cli = commandLineArgs(options);
+async function main() {
+  const cli = commandLineArgs(options);
 
-if(fs.existsSync(cli.errorLogFile))
-{
-  fs.unlinkSync(cli.errorLogFile);
-}
-
-const doc = ltd.toDocument(
-  cli.productPackageJsonFile,
-  cli.productNodeModulesPaths,
-  cli.licenseFilesPath,
-  cli.configFilePath,
-  cli.handlebarsTemplate,
-  cli.disableNpmVersionCheck,
-  cli.licenseTextModifier,
+  if(fs.existsSync(cli.errorLogFile))
   {
-    redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
-    redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
+    fs.unlinkSync(cli.errorLogFile);
   }
-);
 
-if (doc.type === "Error") {
-  printErrors(doc);
-  process.exit(1);
+  const doc = await ltd.toDocument(
+    cli.productPackageJsonFile,
+    cli.productNodeModulesPaths,
+    cli.downloadCmd,
+    cli.licenseFilesPath,
+    cli.configFilePath,
+    cli.handlebarsTemplate,
+    cli.disableNpmVersionCheck,
+    cli.licenseTextModifier,
+    {
+      redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
+      redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
+    }
+  );
+
+  if (doc.type === "Error") {
+    printErrors(doc);
+    process.exit(1);
+  }
+
+  doc.warnings.forEach(warning => console.warn(warning));
+
+  fs.writeFileSync(cli.documentFile, doc.document);
 }
 
-doc.warnings.forEach(warning => console.warn(warning));
-
-fs.writeFileSync(cli.documentFile, doc.document);
+main();

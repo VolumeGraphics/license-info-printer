@@ -18,9 +18,10 @@ The following arguments are available to the license-info-printer CLI:
 |:-------|:-------|:----------|
 |productPackageJsonFile | X | File path to your package.json file of your product. The `dependencies`, `devDependencies` and `optionalDependencies` fields in your `package.json` are all considered to be valid dependencies of your product |
 |productNodeModulesPaths | X | Directory paths to all `node_modules` folder that your product depends on. Separate multiple folder paths with `;` |
-|licenseFilesPath | X | Directory folder path containing all your license files |
-|configFilePath | X | File path location of the config file. It is used to validate licenses, complete missing license information or overwrite incorrect license information of some modules. See **config.json Structure** section. |
-|handlebarsTemplate | X | A document template file based on "handlebars" template engine that is used to print your license file. See **Document template** section. |
+|downloadCmd|| A commandline that will be executed before license generation to download files for license generation. The placeholder \<downloadDir\> defines the directory where the command should download its files|
+|licenseFilesPath | X | Directory folder path containing all your license files. The path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
+|configFilePath | X | File path location of the config file. It is used to validate licenses, complete missing license information or overwrite incorrect license information of some modules. See **config.json Structure** section. The path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
+|handlebarsTemplate | X | A document template file based on "handlebars" template engine that is used to print your license file. See **Document template** section. The path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
 |documentFile | X | File path location to the generated html document. |
 |errorLogFile |   | File path location to the error log file. |
 |disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
@@ -37,7 +38,7 @@ import * as lip from "@volumegraphics/license-info-printer";
 
 ... // set toDocument arguments here. See CLI section for arguments.
 
-const doc = lip.toDocument(
+const doc = await lip.toDocument(
   productPackageJsonFile,
   productNodeModulesPaths, // array type
   licenseFilesPath,
