@@ -178,7 +178,8 @@ export async function toDocument(
   errorLevel: {
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
-  }
+  },
+  excludeMissingPackages: string[]
 ): Promise<DocumentResult | ErrorMessages> {
 
   const downloadResult = await execDownloadCmd(downloadCmd, [licenseFilesPath, configFilePath, handlebarsTemplate])
@@ -201,6 +202,14 @@ export async function toDocument(
   const invalidOverrides = findUnusedOverrides(packageInfos, config.overrides);
   const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses.map(l => l.name), evaluateCopyRightInfo);
   const missingPackages = findMissingPackages(packageInfos, disableNpmVersionCheck);
+  for (const m of missingPackages) {
+    const missing = m.missingDependencies;
+    for (let productName in missing) {
+      if (excludeMissingPackages.includes(productName + "@" + missing[productName])) {
+        delete m.missingDependencies[productName];
+      }
+    }
+  }
   
   const hasMissingDependenciesFn = () => {
     for (let m of missingPackages) {

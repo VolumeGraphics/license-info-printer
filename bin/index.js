@@ -71,6 +71,13 @@ const options = [
     summary: 'Treatment of redundant license overrides. Possible values are: error | suppress.',
     type: String,
     defaultValue: 'error'
+  },
+  {
+    name: 'excludeMissingPackages',
+    summary: 'A list of package names to exclude from the missing packages check.',
+    multiple: true,
+    type: String,
+    defaultValue: []
   }
 ];
 
@@ -94,7 +101,8 @@ async function main() {
     {
       redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
       redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
-    }
+    },
+    cli.excludeMissingPackages
   );
 
   if (doc.type === "Error") {
