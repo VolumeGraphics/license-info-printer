@@ -4,7 +4,7 @@ const fs = require("fs");
 const commandLineArgs = require('command-line-args');
 const process = require("process");
 
-function printErrors(errorObj) {
+function printErrors(errorObj, cli) {
   let content = "";
   for(let m of errorObj.message) {
     content += m;
@@ -98,7 +98,7 @@ async function main() {
   );
 
   if (doc.type === "Error") {
-    printErrors(doc);
+    printErrors(doc, cli);
     process.exit(1);
   }
 
