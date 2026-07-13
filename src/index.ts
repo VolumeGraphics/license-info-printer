@@ -11,6 +11,27 @@ import * as handlebars from 'handlebars'
 const execAsync = util.promisify(cp.exec);
 const mkdtempAsync = util.promisify(fs.mkdtemp);
 
+// Handlebars helpers to safely embed values into JSON output (e.g. SBOM /
+// CycloneDX templates). Handlebars' default {{ }} performs HTML escaping, which
+// is invalid for JSON, while {{{ }}} performs no escaping at all - so any value
+// containing characters like " or \ (for example an author name of
+// `"Cowboy" Ben Alman`) produces invalid JSON. These helpers use JSON.stringify
+// so that every character is encoded correctly.
+
+// {{json value}} -> a complete JSON literal, quotes included. Use in value
+// position, without wrapping quotes:   "author": {{json copyright}}
+// A missing value (undefined) is rendered as an empty string ("").
+handlebars.registerHelper('json', (value: unknown) =>
+  new handlebars.SafeString(value === undefined ? '""' : JSON.stringify(value))
+);
+
+// {{jsonEscape value}} -> the escaped string contents only, without surrounding
+// quotes. Use inside your own quotes:  "author": "{{jsonEscape copyright}}"
+// A missing value (undefined) is rendered as an empty string.
+handlebars.registerHelper('jsonEscape', (value: unknown) =>
+  new handlebars.SafeString(value === undefined ? '' : JSON.stringify(String(value)).slice(1, -1))
+);
+
 type License = {
   file?: string;
   name: string;
@@ -41,11 +62,6 @@ type LicenseText = {
 export enum ResultType {
   Error = "Error",
   Document = "Document"
-}
-
-export enum LicenseEncoding {
-  None = "None",
-  JsonString = "JsonString"
 }
 
 export type ErrorMessages = {
@@ -174,7 +190,6 @@ export async function toDocument(
   configFilePath: string,
   handlebarsTemplate: string,
   disableNpmVersionCheck: boolean,
-  licenseEncoding: LicenseEncoding,
   errorLevel: {
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
@@ -281,10 +296,6 @@ export async function toDocument(
     return e;
   }
 
-  const licenseTextModifier = licenseEncoding === LicenseEncoding.JsonString
-    ? (s: string) => JSON.stringify(s)
-    : (s: string) => s;
-
   packageInfos.pop();
   const licenseFilePath = (file: string) => path.join(licenseFilesPath, file);
 
@@ -293,9 +304,7 @@ export async function toDocument(
     .map((l) => ({
       licenseName: l.name,
       meta: {
-        licenseText: licenseTextModifier(
-          fs.readFileSync(licenseFilePath(l.file)).toString()
-        )
+        licenseText: fs.readFileSync(licenseFilePath(l.file)).toString()
       },
     }));
   

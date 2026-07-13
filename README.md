@@ -25,7 +25,6 @@ The following arguments are available to the license-info-printer CLI:
 |documentFile | X | File path location to the generated html document. |
 |errorLogFile |   | File path location to the error log file. |
 |disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
-|licenseTextModifier|| Modify the license content before applying it to the template. Valid options are "None" and "JsonString". "JsonString" will encode double quotes.
 |errorLevelRedundantHomepageOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a hompage override for a license in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
 |errorLevelRedundantLicenseOverrides |   | Allowed values are "error" and "suppress". Default is "error". if "error" is set, the license printer will give you an error if you have put a license override in your config.json but this license is not used by your product. If you set it to "suppress", nothing will happen. |
 
@@ -41,15 +40,16 @@ import * as lip from "@volumegraphics/license-info-printer";
 const doc = await lip.toDocument(
   productPackageJsonFile,
   productNodeModulesPaths, // array type
+  downloadCmd,
   licenseFilesPath,
   configFilePath,
   handlebarsTemplate,
   disableNpmVersionCheck,
-  licenseTextModifier,
   {
     redundantHomepageOverrides,
     redundantLicenseOverrides
-  }
+  },
+  excludeMissingPackages // array type
 );
 	
 if (doc.type === "Error") {
@@ -111,6 +111,30 @@ Data layout for the handlebars template:
 }
 ```
 You can use the `template.html` file from the [Example](https://www.npmjs.com/package/@volumegraphics/license-info-printer-example) as template.
+## Handlebars helpers
+When your template produces JSON (e.g. an SBOM / CycloneDX document), values such as an author or copyright holder may contain characters that are not valid inside a JSON string, for example the double quotes in `"BB" Bob Bingo`. Handlebars' default `{{ }}` output performs *HTML* escaping (which is invalid for JSON), and `{{{ }}}` performs *no* escaping at all, so both produce broken JSON.
+
+Two helpers are registered to encode any value correctly using `JSON.stringify` (handling quotes, backslashes, newlines, control characters and unicode):
+
+|Helper|Renders|Use it like|
+|:-----|:------|:----------|
+|`{{json value}}`|A complete JSON literal, **including** the surrounding quotes.|`"author": {{json copyright}}`|
+|`{{jsonEscape value}}`|Only the escaped string contents, **without** surrounding quotes, so you keep your own.|`"author": "{{jsonEscape copyright}}"`|
+
+A missing value (`undefined`) is rendered as an empty string. Example SBOM template snippet:
+```hbs
+{{#licenses}}
+{{#libraries}}
+{
+  "name": {{json name}},
+  "version": {{json version}},
+  "author": {{json copyright}},
+  "copyright": {{json copyright}},
+  "licenseText": {{json licenseText}}
+}
+{{/libraries}}
+{{/licenses}}
+```
 # More control required
 If you want to have more control over your license evaluations, have a look at
 [@volumegraphics/license-info-collector](https://www.npmjs.com/package/@volumegraphics/license-info-collector)
