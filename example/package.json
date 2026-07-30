@@ -3,7 +3,7 @@
   "version": "1.1.3",
   "description": "Example usage of license-info-printer",
   "scripts": {
-    "license-info-printer": "license-info-printer --productPackageJsonFile package.json --productNodeModulesPaths ./node_modules --licenseFilesPath ./license_files --configFilePath config.json  --mustacheHtmlTemplate template.html --errorLogFile license_error.txt --documentFile licenses.html"
+    "license-info-printer": "license-info-printer --productPackageJsonFile package.json --productNodeModulesPaths ./node_modules --licenseFilesPath ./license_files --configFilePath config.json --handlebarsTemplate template.html --errorLogFile license_error.txt --documentFile licenses.html"
   },
   "author": "Volume Graphics GmbH",
   "homepage": "https://www.volumegraphics.com/",

@@ -70,8 +70,9 @@ export type ErrorMessages = {
 }
 
 export type DocumentResult = {
-  type: ResultType.Document, 
-  document: string;
+  type: ResultType.Document,
+  /** One rendered document per entry of handlebarsTemplates, in the same order. */
+  documents: string[];
   warnings: string[];
 }
 
@@ -188,7 +189,7 @@ export async function toDocument(
   downloadCmd: string,
   licenseFilesPath: string, 
   configFilePath: string,
-  handlebarsTemplate: string,
+  handlebarsTemplates: string[],
   disableNpmVersionCheck: boolean,
   errorLevel: {
     redundantHomepageOverrides: ErrorLevel,
@@ -197,7 +198,7 @@ export async function toDocument(
   excludeMissingPackages: string[]
 ): Promise<DocumentResult | ErrorMessages> {
 
-  const downloadResult = await execDownloadCmd(downloadCmd, [licenseFilesPath, configFilePath, handlebarsTemplate])
+  const downloadResult = await execDownloadCmd(downloadCmd, [licenseFilesPath, configFilePath, ...handlebarsTemplates])
   if (typeof downloadResult === "string")
     return {
       type: ResultType.Error,
@@ -206,7 +207,7 @@ export async function toDocument(
 
   licenseFilesPath = downloadResult.paths[0];
   configFilePath = downloadResult.paths[1];
-  handlebarsTemplate = downloadResult.paths[2];
+  handlebarsTemplates = downloadResult.paths.slice(2);
 
   const packageInfoResults = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
 
@@ -312,11 +313,18 @@ export async function toDocument(
   const licenseWithMeta = attachMeta(licenseSections, meta)
     .filter(l => meta.find(m => m.licenseName === l.licenseName));
 
-  const document = _toDocument(licenseWithMeta, handlebarsTemplate);
-  downloadResult.cleanup();
+  // Every template is rendered before the caller gets a chance to write anything,
+  // so a broken template leaves no half-written set of documents behind.
+  let documents: string[];
+  try {
+    documents = handlebarsTemplates.map(t => _toDocument(licenseWithMeta, t));
+  }
+  finally {
+    downloadResult.cleanup();
+  }
   return {
     type: ResultType.Document,
-    document,
+    documents,
     warnings: packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`)
   };
 }

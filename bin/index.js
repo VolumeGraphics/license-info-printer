@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 const ltd = require("@volumegraphics/license-info-printer");
 const fs = require("fs");
+const path = require("path");
 const commandLineArgs = require('command-line-args');
 const process = require("process");
 
@@ -37,8 +38,9 @@ const options = [
     summary: 'Configuration file of license-to-document file. The path can be prefixed with <download> to access downloaded files (see downloadCmd option).',
   },
   {
-    name: 'handlebarsTemplate', 
-    summary: 'A template file based on "handlebars (mustache)" template engine that is used to print your license file. The path can be prefixed with <download> to access downloaded files (see downloadCmd option).'
+    name: 'handlebarsTemplate',
+    summary: 'A template file based on "handlebars (mustache)" template engine that is used to print your license file. Pass several templates to render several documents in a single run: the n-th handlebarsTemplate is rendered into the n-th documentFile. Each path can be prefixed with <download> to access downloaded files (see downloadCmd option).',
+    multiple: true
   },
   {
     name: 'errorLogFile',
@@ -46,7 +48,8 @@ const options = [
   },
   {
     name: 'documentFile',
-    summary: 'File location of the generated document'
+    summary: 'File location of the generated document. The number of values must match the number of handlebarsTemplate values.',
+    multiple: true
   },
   {
     name: 'disableNpmVersionCheck',
@@ -83,13 +86,38 @@ async function main() {
     fs.unlinkSync(cli.errorLogFile);
   }
 
+  // An omitted "multiple" option is undefined, not an empty array.
+  const templates = cli.handlebarsTemplate || [];
+  const documentFiles = cli.documentFile || [];
+
+  const argErrors = [];
+  if(templates.length === 0)
+    argErrors.push("handlebarsTemplate option is missing\n");
+  if(documentFiles.length === 0)
+    argErrors.push("documentFile option is missing\n");
+  if(templates.length !== 0 && documentFiles.length !== 0 && templates.length !== documentFiles.length)
+    argErrors.push("handlebarsTemplate and documentFile must be given the same number of values ("
+      + templates.length + " handlebarsTemplate vs. " + documentFiles.length + " documentFile). "
+      + "Each handlebarsTemplate is rendered into the documentFile at the same position.\n");
+
+  const resolvedFiles = documentFiles.map(f => path.resolve(f));
+  const duplicates = [...new Set(resolvedFiles.filter((f, i) => resolvedFiles.indexOf(f) !== i))];
+  if(duplicates.length !== 0)
+    argErrors.push("documentFile values must be unique, otherwise the documents would overwrite each other: "
+      + duplicates.join(", ") + "\n");
+
+  if(argErrors.length !== 0) {
+    printErrors({ message: argErrors }, cli);
+    process.exit(1);
+  }
+
   const doc = await ltd.toDocument(
     cli.productPackageJsonFile,
     cli.productNodeModulesPaths,
     cli.downloadCmd,
     cli.licenseFilesPath,
     cli.configFilePath,
-    cli.handlebarsTemplate,
+    templates,
     cli.disableNpmVersionCheck,
     {
       redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
@@ -105,7 +133,9 @@ async function main() {
 
   doc.warnings.forEach(warning => console.warn(warning));
 
-  fs.writeFileSync(cli.documentFile, doc.document);
+  for(let i = 0; i < documentFiles.length; ++i) {
+    fs.writeFileSync(documentFiles[i], doc.documents[i]);
+  }
 }
 
 main();

@@ -8,7 +8,7 @@ console.log(JSON.stringify(toDocument(
   "",
   baseP + "../../vgs.webenvironment/npm_license_config/license_files",
   baseP + "../../vgs.webenvironment/npm_license_config/config.json",
-  baseP + "../../vgs.webenvironment/npm_license_config/template.html",
+  [baseP + "../../vgs.webenvironment/npm_license_config/template.html"],
   false,
   {
     redundantHomepageOverrides: "suppress",
