@@ -5,6 +5,9 @@
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "bin": "./bin/index.js",
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "scripts": {
     "prepublishOnly": "tsc",
     "build": "tsc"
@@ -28,9 +31,15 @@
     "url": "https://github.com/VolumeGraphics/license-info-printer.git"
   },
   "dependencies": {
+    "@cyclonedx/cyclonedx-library": "^10.1.0",
     "@volumegraphics/license-info-collector": "^3.0.3",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "ajv-formats-draft2019": "^1.6.1",
     "command-line-args": "^5.0.2",
-    "handlebars": "^4.7.8"
+    "handlebars": "^4.7.8",
+    "packageurl-js": "^2.0.1",
+    "spdx-expression-parse": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.4",

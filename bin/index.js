@@ -52,6 +52,16 @@ const options = [
     multiple: true
   },
   {
+    name: 'sbomFile',
+    summary: 'File location of a generated CycloneDX JSON SBOM. The SBOM is validated against the CycloneDX schema before anything is written; if it is invalid, the run fails and no files are written at all.'
+  },
+  {
+    name: 'sbomSpecVersion',
+    summary: 'CycloneDX specification version of the sbomFile. Possible values are: 1.6 | 1.5 | 1.4. Default is 1.6.',
+    type: String,
+    defaultValue: '1.6'
+  },
+  {
     name: 'disableNpmVersionCheck',
     summary: 'Disables the npm version check. It simply compares two version strings instead.',
     type: Boolean,
@@ -90,20 +100,25 @@ async function main() {
   const templates = cli.handlebarsTemplate || [];
   const documentFiles = cli.documentFile || [];
 
+  const sbomSpecVersions = ['1.6', '1.5', '1.4'];
+
   const argErrors = [];
-  if(templates.length === 0)
-    argErrors.push("handlebarsTemplate option is missing\n");
-  if(documentFiles.length === 0)
-    argErrors.push("documentFile option is missing\n");
-  if(templates.length !== 0 && documentFiles.length !== 0 && templates.length !== documentFiles.length)
+  if(templates.length === 0 && documentFiles.length === 0 && !cli.sbomFile)
+    argErrors.push("No output was requested. Give a handlebarsTemplate together with a documentFile, or an sbomFile, or both.\n");
+  else if(templates.length !== documentFiles.length)
     argErrors.push("handlebarsTemplate and documentFile must be given the same number of values ("
       + templates.length + " handlebarsTemplate vs. " + documentFiles.length + " documentFile). "
       + "Each handlebarsTemplate is rendered into the documentFile at the same position.\n");
 
-  const resolvedFiles = documentFiles.map(f => path.resolve(f));
+  if(cli.sbomFile && !sbomSpecVersions.includes(cli.sbomSpecVersion))
+    argErrors.push('Unsupported sbomSpecVersion "' + cli.sbomSpecVersion + '". Possible values are: '
+      + sbomSpecVersions.join(" | ") + ".\n");
+
+  const outputFiles = cli.sbomFile ? documentFiles.concat([cli.sbomFile]) : documentFiles;
+  const resolvedFiles = outputFiles.map(f => path.resolve(f));
   const duplicates = [...new Set(resolvedFiles.filter((f, i) => resolvedFiles.indexOf(f) !== i))];
   if(duplicates.length !== 0)
-    argErrors.push("documentFile values must be unique, otherwise the documents would overwrite each other: "
+    argErrors.push("documentFile and sbomFile values must be unique, otherwise the outputs would overwrite each other: "
       + duplicates.join(", ") + "\n");
 
   if(argErrors.length !== 0) {
@@ -111,20 +126,21 @@ async function main() {
     process.exit(1);
   }
 
-  const doc = await ltd.toDocument(
-    cli.productPackageJsonFile,
-    cli.productNodeModulesPaths,
-    cli.downloadCmd,
-    cli.licenseFilesPath,
-    cli.configFilePath,
-    templates,
-    cli.disableNpmVersionCheck,
-    {
+  const doc = await ltd.toDocument({
+    productPackageJsonFile: cli.productPackageJsonFile,
+    productNodeModulesPaths: cli.productNodeModulesPaths,
+    downloadCmd: cli.downloadCmd,
+    licenseFilesPath: cli.licenseFilesPath,
+    configFilePath: cli.configFilePath,
+    handlebarsTemplates: templates,
+    disableNpmVersionCheck: cli.disableNpmVersionCheck,
+    errorLevel: {
       redundantHomepageOverrides: cli.errorLevelRedundantHomepageOverrides,
       redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
     },
-    cli.excludeMissingPackages
-  );
+    excludeMissingPackages: cli.excludeMissingPackages,
+    sbom: cli.sbomFile ? { specVersion: cli.sbomSpecVersion } : undefined
+  });
 
   if (doc.type === "Error") {
     printErrors(doc, cli);
@@ -136,6 +152,9 @@ async function main() {
   for(let i = 0; i < documentFiles.length; ++i) {
     fs.writeFileSync(documentFiles[i], doc.documents[i]);
   }
+
+  if(cli.sbomFile)
+    fs.writeFileSync(cli.sbomFile, doc.sbom);
 }
 
 main();

@@ -7,6 +7,9 @@ import {Dependency, findMissingPackages, findInvalidPackageContent, collectPacka
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
+import {buildSbom, SbomOptions, SbomPackage} from './sbom'
+
+export {SbomOptions, SbomSpecVersion} from './sbom'
 
 const execAsync = util.promisify(cp.exec);
 const mkdtempAsync = util.promisify(fs.mkdtemp);
@@ -73,6 +76,8 @@ export type DocumentResult = {
   type: ResultType.Document,
   /** One rendered document per entry of handlebarsTemplates, in the same order. */
   documents: string[];
+  /** The CycloneDX SBOM, present only when the sbom option was given. */
+  sbom?: string;
   warnings: string[];
 }
 
@@ -183,20 +188,49 @@ async function execDownloadCmd(downloadCmd: string, paths: string[]) {
   };
 }
 
-export async function toDocument(
-  productPackageJsonFile: string, 
-  productNodeModulesPaths: string[],
-  downloadCmd: string,
-  licenseFilesPath: string, 
-  configFilePath: string,
-  handlebarsTemplates: string[],
-  disableNpmVersionCheck: boolean,
-  errorLevel: {
+export type ToDocumentOptions = {
+  productPackageJsonFile: string;
+  productNodeModulesPaths: string[];
+  downloadCmd?: string;
+  licenseFilesPath: string;
+  configFilePath: string;
+  /** One template per output document. Defaults to none. */
+  handlebarsTemplates?: string[];
+  disableNpmVersionCheck?: boolean;
+  errorLevel?: {
     redundantHomepageOverrides: ErrorLevel,
     redundantLicenseOverrides: ErrorLevel
-  },
-  excludeMissingPackages: string[]
-): Promise<DocumentResult | ErrorMessages> {
+  };
+  excludeMissingPackages?: string[];
+  /** Omit to skip SBOM generation entirely. */
+  sbom?: SbomOptions;
+}
+
+/** Name and version of this package, recorded in the SBOM's metadata.tools. */
+function toolInfo() {
+  const fallback = {name: "@volumegraphics/license-info-printer", version: "0.0.0"};
+  try {
+    const own = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json")).toString());
+    return {name: own.name || fallback.name, version: own.version || fallback.version};
+  } catch (e) {
+    return fallback;
+  }
+}
+
+export async function toDocument(options: ToDocumentOptions): Promise<DocumentResult | ErrorMessages> {
+
+  const productPackageJsonFile = options.productPackageJsonFile;
+  const productNodeModulesPaths = options.productNodeModulesPaths;
+  const downloadCmd = options.downloadCmd !== undefined ? options.downloadCmd : "";
+  const disableNpmVersionCheck = options.disableNpmVersionCheck === true;
+  const excludeMissingPackages = options.excludeMissingPackages !== undefined ? options.excludeMissingPackages : [];
+  const errorLevel = options.errorLevel !== undefined ? options.errorLevel : {
+    redundantHomepageOverrides: "error" as ErrorLevel,
+    redundantLicenseOverrides: "error" as ErrorLevel
+  };
+  let licenseFilesPath = options.licenseFilesPath;
+  let configFilePath = options.configFilePath;
+  let handlebarsTemplates = options.handlebarsTemplates !== undefined ? options.handlebarsTemplates : [];
 
   const downloadResult = await execDownloadCmd(downloadCmd, [licenseFilesPath, configFilePath, ...handlebarsTemplates])
   if (typeof downloadResult === "string")
@@ -212,6 +246,22 @@ export async function toDocument(
   const packageInfoResults = collectPackageInfos(productPackageJsonFile, productNodeModulesPaths, disableNpmVersionCheck);
 
   const packageInfos = packageInfoResults.result;
+
+  // collectPackageInfos appends the product's own entry last, and the packageInfos.pop()
+  // further down removes exactly it. Capture it here, because gatherLicenseSections sorts
+  // the array in place, so its order is only meaningful until then. If the product's
+  // package.json could not be parsed it ends up in invalidPackages instead and the last
+  // entry is an arbitrary dependency - which would silently mislabel the SBOM's root
+  // component, so verify rather than assume.
+  const productInfo = packageInfos[packageInfos.length - 1];
+  const productIsLast = productInfo !== undefined && productInfo.packageJson !== undefined
+    && productInfo.packageJson.some(p => path.resolve(p) === path.resolve(productPackageJsonFile));
+
+  if (options.sbom !== undefined && !productIsLast)
+    return {
+      type: ResultType.Error,
+      message: [`Could not identify the product itself among the collected packages, so the SBOM's root component cannot be filled in. Check that "${productPackageJsonFile}" exists and contains valid JSON.\n`]
+    };
 
   const config:Config = JSON.parse(fs.readFileSync(configFilePath).toString());
   applyOverrides(packageInfos, config.overrides);
@@ -322,9 +372,33 @@ export async function toDocument(
   finally {
     downloadResult.cleanup();
   }
+
+  // The SBOM is built and schema-validated before returning, and the caller writes only
+  // after this resolves - so an invalid SBOM leaves no output files at all, not even the
+  // rendered templates. Note the SBOM lists every collected package, whereas the
+  // templates only see licenses that have a license text file, so the two can differ.
+  let sbom: string | undefined = undefined;
+  if (options.sbom !== undefined) {
+    const licenseTextByName = new Map(meta.map(m => [m.licenseName, m.meta.licenseText] as [string, string]));
+    const sbomResult = await buildSbom({
+      product: productInfo as SbomPackage,
+      packages: packageInfos as SbomPackage[],
+      licenseTextByName,
+      tool: toolInfo(),
+      options: options.sbom
+    });
+    if (sbomResult.type === "Error")
+      return {
+        type: ResultType.Error,
+        message: sbomResult.errors.map(e => e + "\n")
+      };
+    sbom = sbomResult.json;
+  }
+
   return {
     type: ResultType.Document,
     documents,
+    sbom,
     warnings: packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`)
   };
 }
