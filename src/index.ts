@@ -7,9 +7,9 @@ import {Dependency, findMissingPackages, findInvalidPackageContent, collectPacka
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
-import {buildSbom, SbomOptions, SbomPackage} from './sbom'
+import {buildSbom, SbomOptions, SbomPackage} from '@volumegraphics/license-info-sbom'
 
-export {SbomOptions, SbomSpecVersion} from './sbom'
+export {SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
 
 const execAsync = util.promisify(cp.exec);
 const mkdtempAsync = util.promisify(fs.mkdtemp);
