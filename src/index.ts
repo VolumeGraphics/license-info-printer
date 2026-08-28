@@ -7,7 +7,7 @@ import {Dependency, findMissingPackages, findInvalidPackageContent, collectPacka
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
-import {buildSbom, SbomOptions, SbomPackage} from '@volumegraphics/license-info-sbom'
+import {buildSbom, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
 
 export {SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
 
@@ -41,7 +41,9 @@ type License = {
 }
 
 type Config = {
-  overrides: Overrides;
+  overrides: Overrides & {
+    purl?: Override[];
+  };
   licenses: License[];
 }
 
@@ -108,6 +110,10 @@ function copyrightInfo(p: PackageContent) {
 
 function evaluateCopyRightInfo(p:PackageContent) {
   return copyrightInfo(p) !== undefined;
+}
+
+function isSamePackage(p: PackageContent, id: {name: string, version: string}) {
+  return p.name === id.name && p.version === id.version;
 }
 
 function _toDocument(licenseSections: LicenseSectionWithMeta<LicenseText>[], handlebarsTemplate: string) {
@@ -266,6 +272,14 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
   const config:Config = JSON.parse(fs.readFileSync(configFilePath).toString());
   applyOverrides(packageInfos, config.overrides);
   const invalidOverrides = findUnusedOverrides(packageInfos, config.overrides);
+
+  const purlOverrides = config.overrides.purl !== undefined ? config.overrides.purl : [];
+  for (const o of purlOverrides)
+    for (const p of packageInfos.filter(p => isSamePackage(p, o)))
+      (p as SbomPackage).purlOptions = { purl: o.new } as SbomPurlOptions;
+
+  const unmatchedPurlOverrides = purlOverrides.filter(o => !packageInfos.some(p => isSamePackage(p, o)));
+
   const invalidInfo = findInvalidPackageContent(packageInfos, config.licenses.map(l => l.name), evaluateCopyRightInfo);
   const missingPackages = findMissingPackages(packageInfos, disableNpmVersionCheck);
   for (const m of missingPackages) {
@@ -399,6 +413,9 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
     type: ResultType.Document,
     documents,
     sbom,
-    warnings: packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`)
+    warnings: [
+      ...packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`),
+      ...unmatchedPurlOverrides.map(o => `No installed package matches the purl override "${o.name}@${o.version}" (the override has no effect)`)
+    ]
   };
 }

@@ -129,10 +129,23 @@ You can use the `config.json` from the [Example](https://www.npmjs.com/package/@
         "new": "<Valid new license>",
         "comment": "<fyi>"
       }
+    ],
+    "purl" : [ // only used when an sbomFile is generated. See **CycloneDX SBOM** section.
+      {
+        "name": "<Name of the library>",
+        "version": "<Version string>",
+        "new": "<Complete package URL, or null for no package URL at all>",
+        "comment": "<fyi>"
+      }
     ]
   }
 }
 ```
+
+## overrides.purl
+Replaces the package URL of one library in the SBOM. Matched on an **exact** name and version, like the other overrides; an override matching no installed library is reported as a warning rather than an error, so a stale version is visible instead of silently doing nothing. Without it, an `npm` package URL is built from the name and version, which is wrong for a library that reaches your product from another ecosystem or is named differently there. The value in `new` is used **verbatim**, so it has to be a complete purl - nothing checks its syntax, and the purl is the field Black Duck matches on. Use `null` for a library that no package URL names correctly: none is emitted, which is better than a wrong one.
+
+This affects the SBOM only. The rendered handlebars documents are unchanged by it.
 # Document template
 The documents Template uses the template engine "handlebars". See https://handlebarsjs.com/ on how to configure it.
 If you pass several templates, every one of them receives the same data, and `index` restarts at 1 in each document.
