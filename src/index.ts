@@ -7,7 +7,7 @@ import {Dependency, findMissingPackages, findInvalidPackageContent, collectPacka
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
-import {buildSbom, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
+import {buildSbom, DEPENDENCY_TYPES, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
 
 export {DEPENDENCY_TYPES, DependencyType, SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
 
@@ -211,7 +211,7 @@ export type ToDocumentOptions = {
   /**
    * One SBOM per entry, all from the same collected dependency tree. Give each its own
    * dependencyTypes to choose what it covers, for example everything that was built and
-   * what ships. Defaults to none.
+   * what ships; left out, an SBOM covers all of them. Defaults to none.
    */
   sboms?: SbomOptions[];
 }
@@ -394,9 +394,13 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
 
   // Every SBOM is built and schema-validated before returning, and the caller writes only
   // after this resolves - so an invalid SBOM leaves no output files at all, not even the
-  // rendered templates. Each gets every collected package to choose from: one without
-  // dependencyTypes lists all of them, whereas the templates only see licenses that have a
-  // license text file, so the two can differ.
+  // rendered templates.
+  //
+  // An SBOM lists what the product reaches through its dependencyTypes, all of them when
+  // left out, rather than every collected package: the collector keeps any package.json
+  // that another one names, so test fixtures and benchmarks inside other packages too. The
+  // templates do see every collected package whose license has a license text file, so the
+  // two outputs can differ.
   const licenseTextByName = new Map(meta.map(m => [m.licenseName, m.meta.licenseText] as [string, string]));
   const sboms: string[] = [];
   for (const request of sbomRequests) {
@@ -405,7 +409,7 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
       packages: packageInfos as SbomPackage[],
       licenseTextByName,
       tool: toolInfo(),
-      options: request
+      options: { ...request, dependencyTypes: request.dependencyTypes !== undefined ? request.dependencyTypes : DEPENDENCY_TYPES }
     });
     if (sbomResult.type === "Error")
       return {

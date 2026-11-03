@@ -58,7 +58,7 @@ const options = [
   },
   {
     name: 'sbomDependencyTypes',
-    summary: "Which of the product's dependency fields an SBOM covers, as a comma-separated list of dependencies, devDependencies and optionalDependencies. Give one value per sbomFile: the n-th sbomDependencyTypes applies to the n-th sbomFile. Left out, every SBOM lists every collected package.",
+    summary: "Which of the product's dependency fields an SBOM covers, as a comma-separated list of dependencies, devDependencies and optionalDependencies. Give one value per sbomFile: the n-th sbomDependencyTypes applies to the n-th sbomFile. Left out, every SBOM covers all three.",
     multiple: true
   },
   {
@@ -121,7 +121,7 @@ async function main() {
   if(sbomDependencyTypes.length !== 0 && sbomDependencyTypes.length !== sbomFiles.length)
     argErrors.push("sbomDependencyTypes must be given once per sbomFile ("
       + sbomDependencyTypes.length + " sbomDependencyTypes vs. " + sbomFiles.length + " sbomFile). "
-      + "The n-th sbomDependencyTypes applies to the n-th sbomFile; leave it out for SBOMs of every collected package.\n");
+      + "The n-th sbomDependencyTypes applies to the n-th sbomFile; leave it out for SBOMs that cover all three.\n");
 
   // One comma-separated list per SBOM, such as "dependencies,optionalDependencies".
   const dependencyTypesPerSbom = sbomDependencyTypes.map(value => (value || "").split(",").map(t => t.trim()).filter(t => t !== ""));

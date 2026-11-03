@@ -26,7 +26,7 @@ The following arguments are available to the license-info-printer CLI:
 |handlebarsTemplate | X | A document template file based on "handlebars" template engine that is used to print your license file. See **Document template** section. **Multiple** &ndash; pass one template per output document; the n-th `handlebarsTemplate` is rendered into the n-th `documentFile`. Each path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
 |documentFile | X | File path location to a generated document. **Multiple** &ndash; must be given exactly as many values as `handlebarsTemplate`, and the values must be distinct. See **Generating several documents in one run** section. |
 |sbomFile |   | File path location to a generated CycloneDX JSON SBOM. **Multiple** &ndash; pass one value per SBOM, and choose what each covers with `sbomDependencyTypes`. See **CycloneDX SBOM** section. Either this or a `handlebarsTemplate`/`documentFile` pair is required. |
-|sbomDependencyTypes |   | Which of your product's dependency fields an SBOM covers: a comma-separated list of `dependencies`, `devDependencies` and `optionalDependencies`. **Multiple** &ndash; one value per `sbomFile`; the n-th `sbomDependencyTypes` applies to the n-th `sbomFile`. Left out, every SBOM lists every package the collector found. See **Several SBOMs from one run** section. |
+|sbomDependencyTypes |   | Which of your product's dependency fields an SBOM covers: a comma-separated list of `dependencies`, `devDependencies` and `optionalDependencies`. **Multiple** &ndash; one value per `sbomFile`; the n-th `sbomDependencyTypes` applies to the n-th `sbomFile`. Left out, every SBOM covers all three. See **Several SBOMs from one run** section. |
 |sbomSpecVersion |   | CycloneDX specification version of every `sbomFile`. Allowed values are "1.6", "1.5" and "1.4". Default is "1.6". |
 |errorLogFile |   | File path location to the error log file. |
 |disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
@@ -63,6 +63,9 @@ For a CycloneDX SBOM use `--sbomFile` rather than a template: see **CycloneDX SB
 # Use as library
 Instead of using the Command Line Interface, you can invoke the license-info-printer from your code.
 
+## Breaking changes in 8.0.0 ##
+Without `sbomDependencyTypes`, an SBOM now lists what your product reaches through its `dependencies`, `devDependencies` and `optionalDependencies` instead of every package the collector found. That leaves out `package.json` files nothing needs, such as test fixtures and benchmarks inside other packages, which the collector keeps because another package names them, for example in its own `devDependencies`. The handlebars documents are unchanged.
+
 ## Breaking changes in 7.0.0 ##
 The `sbom: SbomOptions` option became `sboms: SbomOptions[]`, and `DocumentResult.sbom: string` became `sboms: string[]` (one entry per requested SBOM, in the same order), so that one run can produce several SBOMs. To migrate, wrap your SBOM options in an array and read `sboms[0]`. The Command Line Interface is unchanged for single SBOM invocations.
 
@@ -91,7 +94,7 @@ const doc = await lip.toDocument({
   sboms: [{                // one entry per SBOM, optional
     specVersion: "1.6",    // optional, default "1.6"
     includeLicenseText: false, // optional, default false
-    dependencyTypes: ["dependencies", "optionalDependencies"] // optional, default: every collected package
+    dependencyTypes: ["dependencies", "optionalDependencies"] // optional, default all three
   }]
 });
 	
@@ -216,7 +219,7 @@ Emitted per component: `type`, `name`, `group` for scoped packages, `version`, a
 Licenses follow the CycloneDX convention: a valid SPDX identifier is written as `license.id`, a valid SPDX expression as `expression`, and anything else as free text in `license.name`. So a `config.json` entry like `"Public Domain"`, which is not an SPDX identifier, still produces a valid document.
 
 Two notes on the contents:
-* Without `sbomDependencyTypes` the SBOM lists **every** package the collector found, while the handlebars documents only show licenses that have a license text file configured in your `config.json`. The two outputs can therefore legitimately differ.
+* The SBOM lists what your product reaches through its dependency fields, while the handlebars documents show every package the collector found whose license has a license text file configured in your `config.json`. The two outputs can therefore legitimately differ.
 * Only the product's own `devDependencies` appear as `dependencies` edges. npm never installs the devDependencies of a dependency, so such an edge could only be resolved against some unrelated package that happens to satisfy the version range.
 * `serialNumber` and `metadata.timestamp` differ on every run, so the file is not byte-for-byte reproducible even though all lists are sorted.
 
@@ -234,7 +237,7 @@ Pass several `sbomFile` values to write several SBOMs from the same collected de
 
 An SBOM with `sbomDependencyTypes` lists the packages your product reaches through those fields of its `package.json`. Below your product, a package's `dependencies` are always followed and its `optionalDependencies` only when `optionalDependencies` is given, the way npm's `--omit=optional` works; a package's `devDependencies` never are. So `dependencies,optionalDependencies` leaves out your build tooling together with everything only the tooling needs, and the `dependencies` graph of each SBOM follows the same edges.
 
-Without `sbomDependencyTypes`, every SBOM lists every package the collector found, as before &ndash; including installed packages that nothing in your product needs.
+Without `sbomDependencyTypes`, an SBOM covers all three fields: everything your product needs to build and to run.
 
 ## Importing into Black Duck
 The default `sbomSpecVersion` of 1.6 needs **Black Duck 2025.1.0 or newer**. Pass `--sbomSpecVersion 1.4` for older installations. Upload the file under Scans &rarr; Upload File as type SBOM-CycloneDX, then map the scan to a project and version.
