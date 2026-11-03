@@ -53,11 +53,17 @@ const options = [
   },
   {
     name: 'sbomFile',
-    summary: 'File location of a generated CycloneDX JSON SBOM. The SBOM is validated against the CycloneDX schema before anything is written; if it is invalid, the run fails and no files are written at all.'
+    summary: 'File location of a generated CycloneDX JSON SBOM. Pass several to generate several SBOMs from the same dependency tree in a single run, and choose what each covers with sbomDependencyTypes. Every SBOM is validated against the CycloneDX schema before anything is written; if one is invalid, the run fails and no files are written at all.',
+    multiple: true
+  },
+  {
+    name: 'sbomDependencyTypes',
+    summary: "Which of the product's dependency fields an SBOM covers, as a comma-separated list of dependencies, devDependencies and optionalDependencies. Give one value per sbomFile: the n-th sbomDependencyTypes applies to the n-th sbomFile. Left out, every SBOM lists every collected package.",
+    multiple: true
   },
   {
     name: 'sbomSpecVersion',
-    summary: 'CycloneDX specification version of the sbomFile. Possible values are: 1.6 | 1.5 | 1.4. Default is 1.6.',
+    summary: 'CycloneDX specification version of every sbomFile. Possible values are: 1.6 | 1.5 | 1.4. Default is 1.6.',
     type: String,
     defaultValue: '1.6'
   },
@@ -99,22 +105,37 @@ async function main() {
   // An omitted "multiple" option is undefined, not an empty array.
   const templates = cli.handlebarsTemplate || [];
   const documentFiles = cli.documentFile || [];
+  const sbomFiles = cli.sbomFile || [];
+  const sbomDependencyTypes = cli.sbomDependencyTypes || [];
 
   const sbomSpecVersions = ['1.6', '1.5', '1.4'];
 
   const argErrors = [];
-  if(templates.length === 0 && documentFiles.length === 0 && !cli.sbomFile)
+  if(templates.length === 0 && documentFiles.length === 0 && sbomFiles.length === 0)
     argErrors.push("No output was requested. Give a handlebarsTemplate together with a documentFile, or an sbomFile, or both.\n");
   else if(templates.length !== documentFiles.length)
     argErrors.push("handlebarsTemplate and documentFile must be given the same number of values ("
       + templates.length + " handlebarsTemplate vs. " + documentFiles.length + " documentFile). "
       + "Each handlebarsTemplate is rendered into the documentFile at the same position.\n");
 
-  if(cli.sbomFile && !sbomSpecVersions.includes(cli.sbomSpecVersion))
+  if(sbomDependencyTypes.length !== 0 && sbomDependencyTypes.length !== sbomFiles.length)
+    argErrors.push("sbomDependencyTypes must be given once per sbomFile ("
+      + sbomDependencyTypes.length + " sbomDependencyTypes vs. " + sbomFiles.length + " sbomFile). "
+      + "The n-th sbomDependencyTypes applies to the n-th sbomFile; leave it out for SBOMs of every collected package.\n");
+
+  // One comma-separated list per SBOM, such as "dependencies,optionalDependencies".
+  const dependencyTypesPerSbom = sbomDependencyTypes.map(value => (value || "").split(",").map(t => t.trim()).filter(t => t !== ""));
+  dependencyTypesPerSbom.forEach((types, i) => {
+    if(types.length === 0 || types.some(t => !ltd.DEPENDENCY_TYPES.includes(t)))
+      argErrors.push('Invalid sbomDependencyTypes "' + sbomDependencyTypes[i] + '". Give a comma-separated list of '
+        + ltd.DEPENDENCY_TYPES.join(", ") + ".\n");
+  });
+
+  if(sbomFiles.length !== 0 && !sbomSpecVersions.includes(cli.sbomSpecVersion))
     argErrors.push('Unsupported sbomSpecVersion "' + cli.sbomSpecVersion + '". Possible values are: '
       + sbomSpecVersions.join(" | ") + ".\n");
 
-  const outputFiles = cli.sbomFile ? documentFiles.concat([cli.sbomFile]) : documentFiles;
+  const outputFiles = documentFiles.concat(sbomFiles);
   const resolvedFiles = outputFiles.map(f => path.resolve(f));
   const duplicates = [...new Set(resolvedFiles.filter((f, i) => resolvedFiles.indexOf(f) !== i))];
   if(duplicates.length !== 0)
@@ -139,7 +160,10 @@ async function main() {
       redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
     },
     excludeMissingPackages: cli.excludeMissingPackages,
-    sbom: cli.sbomFile ? { specVersion: cli.sbomSpecVersion } : undefined
+    sboms: sbomFiles.map((file, i) => ({
+      specVersion: cli.sbomSpecVersion,
+      dependencyTypes: dependencyTypesPerSbom.length !== 0 ? dependencyTypesPerSbom[i] : undefined
+    }))
   });
 
   if (doc.type === "Error") {
@@ -153,8 +177,9 @@ async function main() {
     fs.writeFileSync(documentFiles[i], doc.documents[i]);
   }
 
-  if(cli.sbomFile)
-    fs.writeFileSync(cli.sbomFile, doc.sbom);
+  for(let i = 0; i < sbomFiles.length; ++i) {
+    fs.writeFileSync(sbomFiles[i], doc.sboms[i]);
+  }
 }
 
 main();

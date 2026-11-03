@@ -1,6 +1,6 @@
 {
   "name": "@volumegraphics/license-info-printer",
-  "version": "6.4.0",
+  "version": "7.0.0",
   "description": "Collects and renders all dependant module licences of your project to a html document",
   "main": "./lib/index.js",
   "types": "./lib/index.d.ts",
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@volumegraphics/license-info-collector": "^3.0.3",
-    "@volumegraphics/license-info-sbom": "^2.0.0",
+    "@volumegraphics/license-info-sbom": "^2.1.0",
     "command-line-args": "^5.0.2",
     "handlebars": "^4.7.8"
   },

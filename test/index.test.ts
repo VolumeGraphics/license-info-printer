@@ -12,5 +12,5 @@ toDocument({
     redundantHomepageOverrides: "suppress",
     redundantLicenseOverrides: "suppress"
   },
-  sbom: {}
+  sboms: [{}]
 }).then(result => console.log(JSON.stringify(result, null, 2)));

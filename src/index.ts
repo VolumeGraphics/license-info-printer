@@ -9,7 +9,7 @@ import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
 import {buildSbom, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
 
-export {SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
+export {DEPENDENCY_TYPES, DependencyType, SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
 
 const execAsync = util.promisify(cp.exec);
 const mkdtempAsync = util.promisify(fs.mkdtemp);
@@ -78,8 +78,8 @@ export type DocumentResult = {
   type: ResultType.Document,
   /** One rendered document per entry of handlebarsTemplates, in the same order. */
   documents: string[];
-  /** The CycloneDX SBOM, present only when the sbom option was given. */
-  sbom?: string;
+  /** One CycloneDX SBOM per entry of the sboms option, in the same order. */
+  sboms: string[];
   warnings: string[];
 }
 
@@ -208,8 +208,12 @@ export type ToDocumentOptions = {
     redundantLicenseOverrides: ErrorLevel
   };
   excludeMissingPackages?: string[];
-  /** Omit to skip SBOM generation entirely. */
-  sbom?: SbomOptions;
+  /**
+   * One SBOM per entry, all from the same collected dependency tree. Give each its own
+   * dependencyTypes to choose what it covers, for example everything that was built and
+   * what ships. Defaults to none.
+   */
+  sboms?: SbomOptions[];
 }
 
 /** Name and version of this package, recorded in the SBOM's metadata.tools. */
@@ -228,6 +232,7 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
   const productPackageJsonFile = options.productPackageJsonFile;
   const productNodeModulesPaths = options.productNodeModulesPaths;
   const downloadCmd = options.downloadCmd !== undefined ? options.downloadCmd : "";
+  const sbomRequests = options.sboms !== undefined ? options.sboms : [];
   const disableNpmVersionCheck = options.disableNpmVersionCheck === true;
   const excludeMissingPackages = options.excludeMissingPackages !== undefined ? options.excludeMissingPackages : [];
   const errorLevel = options.errorLevel !== undefined ? options.errorLevel : {
@@ -263,7 +268,7 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
   const productIsLast = productInfo !== undefined && productInfo.packageJson !== undefined
     && productInfo.packageJson.some(p => path.resolve(p) === path.resolve(productPackageJsonFile));
 
-  if (options.sbom !== undefined && !productIsLast)
+  if (sbomRequests.length !== 0 && !productIsLast)
     return {
       type: ResultType.Error,
       message: [`Could not identify the product itself among the collected packages, so the SBOM's root component cannot be filled in. Check that "${productPackageJsonFile}" exists and contains valid JSON.\n`]
@@ -387,32 +392,33 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
     downloadResult.cleanup();
   }
 
-  // The SBOM is built and schema-validated before returning, and the caller writes only
+  // Every SBOM is built and schema-validated before returning, and the caller writes only
   // after this resolves - so an invalid SBOM leaves no output files at all, not even the
-  // rendered templates. Note the SBOM lists every collected package, whereas the
-  // templates only see licenses that have a license text file, so the two can differ.
-  let sbom: string | undefined = undefined;
-  if (options.sbom !== undefined) {
-    const licenseTextByName = new Map(meta.map(m => [m.licenseName, m.meta.licenseText] as [string, string]));
+  // rendered templates. Each gets every collected package to choose from: one without
+  // dependencyTypes lists all of them, whereas the templates only see licenses that have a
+  // license text file, so the two can differ.
+  const licenseTextByName = new Map(meta.map(m => [m.licenseName, m.meta.licenseText] as [string, string]));
+  const sboms: string[] = [];
+  for (const request of sbomRequests) {
     const sbomResult = await buildSbom({
       product: productInfo as SbomPackage,
       packages: packageInfos as SbomPackage[],
       licenseTextByName,
       tool: toolInfo(),
-      options: options.sbom
+      options: request
     });
     if (sbomResult.type === "Error")
       return {
         type: ResultType.Error,
         message: sbomResult.errors.map(e => e + "\n")
       };
-    sbom = sbomResult.json;
+    sboms.push(sbomResult.json);
   }
 
   return {
     type: ResultType.Document,
     documents,
-    sbom,
+    sboms,
     warnings: [
       ...packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`),
       ...unmatchedPurlOverrides.map(o => `No installed package matches the purl override "${o.name}@${o.version}" (the override has no effect)`)
