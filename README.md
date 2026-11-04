@@ -25,8 +25,8 @@ The following arguments are available to the license-info-printer CLI:
 |configFilePath | X | File path location of the config file. It is used to validate licenses, complete missing license information or overwrite incorrect license information of some modules. See **config.json Structure** section. The path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
 |handlebarsTemplate | X | A document template file based on "handlebars" template engine that is used to print your license file. See **Document template** section. **Multiple** &ndash; pass one template per output document; the n-th `handlebarsTemplate` is rendered into the n-th `documentFile`. Each path can be prefixed with \<download\> to access downloaded files (see downloadCmd option). |
 |documentFile | X | File path location to a generated document. **Multiple** &ndash; must be given exactly as many values as `handlebarsTemplate`, and the values must be distinct. See **Generating several documents in one run** section. |
-|sbomFile |   | File path location to a generated CycloneDX JSON SBOM. **Multiple** &ndash; pass one value per SBOM, and choose what each covers with `sbomDependencyTypes`. See **CycloneDX SBOM** section. Either this or a `handlebarsTemplate`/`documentFile` pair is required. |
-|sbomDependencyTypes |   | Which of your product's dependency fields an SBOM covers: a comma-separated list of `dependencies`, `devDependencies` and `optionalDependencies`. **Multiple** &ndash; one value per `sbomFile`; the n-th `sbomDependencyTypes` applies to the n-th `sbomFile`. Left out, every SBOM covers all three. See **Several SBOMs from one run** section. |
+|sbomFile |   | File path location to a generated CycloneDX JSON SBOM. **Multiple** &ndash; pass one value per SBOM. Each lists every package the collector found, unless `sbomPackageList` gives it a package list. See **CycloneDX SBOM** section. Either this or a `handlebarsTemplate`/`documentFile` pair is required. |
+|sbomPackageList |   | Makes one SBOM list exactly the packages named in a file instead of every collected package, given as `<sbomFile>=<listFile>`. The list file is a JSON array of `"name@version"` strings, such as a bundler plugin can write for the packages a build ships. **Multiple** &ndash; one value per SBOM that gets a list. See **What ships** section. |
 |sbomSpecVersion |   | CycloneDX specification version of every `sbomFile`. Allowed values are "1.6", "1.5" and "1.4". Default is "1.6". |
 |errorLogFile |   | File path location to the error log file. |
 |disableNpmVersionCheck |    | By default, the license printer insits on a correct npm license string (see spdx for more information). If it is incorrect, it will give you an error. If you set the "disableNpmVersionCheck" flag, it will not do this. |
@@ -63,6 +63,9 @@ For a CycloneDX SBOM use `--sbomFile` rather than a template: see **CycloneDX SB
 # Use as library
 Instead of using the Command Line Interface, you can invoke the license-info-printer from your code.
 
+## Breaking changes in 9.0.0 ##
+`sbomDependencyTypes` and the `dependencyTypes` of an `sboms` entry are gone, and so are the `DEPENDENCY_TYPES` and `DependencyType` exports: dependency fields cannot tell what a bundled product ships. An SBOM lists every package the collector found again, as before 8.0.0, or, with `sbomPackageList` or `packages`, exactly the packages a bundler recorded. To migrate, drop the option, and for an SBOM of what ships see **What ships**.
+
 ## Breaking changes in 8.0.0 ##
 Without `sbomDependencyTypes`, an SBOM now lists what your product reaches through its `dependencies`, `devDependencies` and `optionalDependencies` instead of every package the collector found. That leaves out `package.json` files nothing needs, such as test fixtures and benchmarks inside other packages, which the collector keeps because another package names them, for example in its own `devDependencies`. The handlebars documents are unchanged.
 
@@ -93,8 +96,9 @@ const doc = await lip.toDocument({
   excludeMissingPackages,  // array type, optional
   sboms: [{                // one entry per SBOM, optional
     specVersion: "1.6",    // optional, default "1.6"
-    includeLicenseText: false, // optional, default false
-    dependencyTypes: ["dependencies", "optionalDependencies"] // optional, default all three
+    includeLicenseText: false // optional, default false
+  }, {
+    packages: ["react@17.0.2"] // optional: exactly these collected packages instead of everything
   }]
 });
 	
@@ -219,12 +223,17 @@ Emitted per component: `type`, `name`, `group` for scoped packages, `version`, a
 Licenses follow the CycloneDX convention: a valid SPDX identifier is written as `license.id`, a valid SPDX expression as `expression`, and anything else as free text in `license.name`. So a `config.json` entry like `"Public Domain"`, which is not an SPDX identifier, still produces a valid document.
 
 Two notes on the contents:
-* The SBOM lists what your product reaches through its dependency fields, while the handlebars documents show every package the collector found whose license has a license text file configured in your `config.json`. The two outputs can therefore legitimately differ.
+* Without a package list the SBOM lists **every** package the collector found, while the handlebars documents only show licenses that have a license text file configured in your `config.json`. The two outputs can therefore legitimately differ.
 * Only the product's own `devDependencies` appear as `dependencies` edges. npm never installs the devDependencies of a dependency, so such an edge could only be resolved against some unrelated package that happens to satisfy the version range.
 * `serialNumber` and `metadata.timestamp` differ on every run, so the file is not byte-for-byte reproducible even though all lists are sorted.
 
 ## Several SBOMs from one run
-Pass several `sbomFile` values to write several SBOMs from the same collected dependency tree, and give each an `sbomDependencyTypes` value to choose what it covers &ndash; for example everything that was built, and what ships:
+Pass several `sbomFile` values to write several SBOMs from the same collected dependency tree, and give some of them a package list with `sbomPackageList` &ndash; for example everything that was built, and what ships: see **What ships**.
+
+An SBOM without a package list lists every package the collector found: what your product needs to build and to run, and also installed `package.json` files that nothing in it needs, such as test fixtures inside other packages.
+
+## What ships
+Dependency fields describe what your `package.json` declares, which is not what a bundled product ships: a loader listed under `dependencies` contributes no code to the bundle, while `style-loader`, usually a devDependency, injects runtime code into it. For an SBOM of what actually ships, let your bundler record which packages have code in its output - a JSON array of `"name@version"` strings, for example written by a webpack plugin when the build is done - and hand that list to `sbomPackageList`:
 
     license-info-printer \
       --productPackageJsonFile package.json \
@@ -232,12 +241,10 @@ Pass several `sbomFile` values to write several SBOMs from the same collected de
       --licenseFilesPath ./license_files \
       --configFilePath config.json \
       --sbomFile my-product-1.2.3-all-sbom.json my-product-1.2.3-sbom.json \
-      --sbomDependencyTypes dependencies,devDependencies,optionalDependencies dependencies,optionalDependencies \
+      --sbomPackageList my-product-1.2.3-sbom.json=node_modules/.cache/bundled-packages.json \
       --errorLogFile license_error.txt
 
-An SBOM with `sbomDependencyTypes` lists the packages your product reaches through those fields of its `package.json`. Below your product, a package's `dependencies` are always followed and its `optionalDependencies` only when `optionalDependencies` is given, the way npm's `--omit=optional` works; a package's `devDependencies` never are. So `dependencies,optionalDependencies` leaves out your build tooling together with everything only the tooling needs, and the `dependencies` graph of each SBOM follows the same edges.
-
-Without `sbomDependencyTypes`, an SBOM covers all three fields: everything your product needs to build and to run.
+The SBOM then lists exactly those of the collected packages, and its `dependencies` graph the edges between them. A listed package the collector did not find, such as one outside `productNodeModulesPaths`, is reported as a warning.
 
 ## Importing into Black Duck
 The default `sbomSpecVersion` of 1.6 needs **Black Duck 2025.1.0 or newer**. Pass `--sbomSpecVersion 1.4` for older installations. Upload the file under Scans &rarr; Upload File as type SBOM-CycloneDX, then map the scan to a project and version.
@@ -247,7 +254,7 @@ Be aware of how Black Duck treats the document:
 * A component without a `name` makes Black Duck reject the whole SBOM. That is why generation fails if any package is missing one.
 * `purl` is what Black Duck matches on, and auto-creation of unmatched components requires it.
 * Uploading a file whose **name** matches an earlier upload overwrites it, so put your product name and version in the file name.
-* `dependencies` and `scope` are ignored on import, so build-time-only packages cannot be flagged as such: every component is imported as a prerequisite. Upload an SBOM of what ships instead, see **Several SBOMs from one run**.
+* `dependencies` and `scope` are ignored on import, so build-time-only packages cannot be flagged as such: every component is imported as a prerequisite. Upload an SBOM of what ships instead, see **What ships**.
 
 # More control required
 If you want to have more control over your license evaluations, have a look at

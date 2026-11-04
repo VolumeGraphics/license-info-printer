@@ -7,9 +7,9 @@ import {Dependency, findMissingPackages, findInvalidPackageContent, collectPacka
 import {applyOverrides, findUnusedOverrides, Override, Overrides} from '@volumegraphics/license-info-collector'
 import {gatherLicenseSections} from '@volumegraphics/license-info-collector'
 import * as handlebars from 'handlebars'
-import {buildSbom, DEPENDENCY_TYPES, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
+import {buildSbom, SbomOptions, SbomPackage, SbomPurlOptions} from '@volumegraphics/license-info-sbom'
 
-export {DEPENDENCY_TYPES, DependencyType, SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
+export {SbomOptions, SbomSpecVersion} from '@volumegraphics/license-info-sbom'
 
 const execAsync = util.promisify(cp.exec);
 const mkdtempAsync = util.promisify(fs.mkdtemp);
@@ -209,11 +209,20 @@ export type ToDocumentOptions = {
   };
   excludeMissingPackages?: string[];
   /**
-   * One SBOM per entry, all from the same collected dependency tree. Give each its own
-   * dependencyTypes to choose what it covers, for example everything that was built and
-   * what ships; left out, an SBOM covers all of them. Defaults to none.
+   * One SBOM per entry, all from the same collected dependency tree: every collected package,
+   * or with packages exactly those, for example what a bundler put into the build. Defaults
+   * to none.
    */
-  sboms?: SbomOptions[];
+  sboms?: SbomRequest[];
+}
+
+export type SbomRequest = SbomOptions & {
+  /**
+   * Lists exactly these collected packages, given as "name@version", instead of every
+   * collected package - for example what a bundler put into the build, as a bundler plugin
+   * can record it. A name that matches no collected package is reported as a warning.
+   */
+  packages?: string[];
 }
 
 /** Name and version of this package, recorded in the SBOM's metadata.tools. */
@@ -396,20 +405,29 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
   // after this resolves - so an invalid SBOM leaves no output files at all, not even the
   // rendered templates.
   //
-  // An SBOM lists what the product reaches through its dependencyTypes, all of them when
-  // left out, rather than every collected package: the collector keeps any package.json
-  // that another one names, so test fixtures and benchmarks inside other packages too. The
-  // templates do see every collected package whose license has a license text file, so the
-  // two outputs can differ.
+  // An SBOM lists every collected package, or with a package list exactly those. The
+  // templates only see licenses that have a license text file, so the outputs can differ.
   const licenseTextByName = new Map(meta.map(m => [m.licenseName, m.meta.licenseText] as [string, string]));
+  const idOf = (p: PackageContent) => `${p.name}@${p.version}`;
   const sboms: string[] = [];
+  const unlistedPackages = new Set<string>();
   for (const request of sbomRequests) {
+    const { packages: packageList, ...sbomOptions } = request;
+    let packages = packageInfos as SbomPackage[];
+    if (packageList !== undefined) {
+      const wanted = new Set(packageList);
+      packages = packageInfos.filter(p => wanted.has(idOf(p))) as SbomPackage[];
+      const found = new Set(packages.map(p => idOf(p as PackageContent)));
+      for (const id of packageList)
+        if (!found.has(id))
+          unlistedPackages.add(id);
+    }
     const sbomResult = await buildSbom({
       product: productInfo as SbomPackage,
-      packages: packageInfos as SbomPackage[],
+      packages,
       licenseTextByName,
       tool: toolInfo(),
-      options: { ...request, dependencyTypes: request.dependencyTypes !== undefined ? request.dependencyTypes : DEPENDENCY_TYPES }
+      options: sbomOptions
     });
     if (sbomResult.type === "Error")
       return {
@@ -425,7 +443,8 @@ export async function toDocument(options: ToDocumentOptions): Promise<DocumentRe
     sboms,
     warnings: [
       ...packageInfoResults.invalidPackages.map(invalidPackage => `Could not parse the following package: "${invalidPackage.packageFilePath}" (package is ignored)`),
-      ...unmatchedPurlOverrides.map(o => `No installed package matches the purl override "${o.name}@${o.version}" (the override has no effect)`)
+      ...unmatchedPurlOverrides.map(o => `No installed package matches the purl override "${o.name}@${o.version}" (the override has no effect)`),
+      ...[...unlistedPackages].map(id => `No collected package matches "${id}" from an SBOM package list (it is left out of that SBOM)`)
     ]
   };
 }

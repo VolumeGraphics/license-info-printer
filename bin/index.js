@@ -53,12 +53,12 @@ const options = [
   },
   {
     name: 'sbomFile',
-    summary: 'File location of a generated CycloneDX JSON SBOM. Pass several to generate several SBOMs from the same dependency tree in a single run, and choose what each covers with sbomDependencyTypes. Every SBOM is validated against the CycloneDX schema before anything is written; if one is invalid, the run fails and no files are written at all.',
+    summary: 'File location of a generated CycloneDX JSON SBOM of every collected package. Pass several to generate several SBOMs from the same dependency tree in a single run, and give some of them a package list with sbomPackageList. Every SBOM is validated against the CycloneDX schema before anything is written; if one is invalid, the run fails and no files are written at all.',
     multiple: true
   },
   {
-    name: 'sbomDependencyTypes',
-    summary: "Which of the product's dependency fields an SBOM covers, as a comma-separated list of dependencies, devDependencies and optionalDependencies. Give one value per sbomFile: the n-th sbomDependencyTypes applies to the n-th sbomFile. Left out, every SBOM covers all three.",
+    name: 'sbomPackageList',
+    summary: 'Makes one SBOM list exactly the packages named in a file instead of every collected package, given as <sbomFile>=<listFile>. The list file is a JSON array of "name@version" strings, such as a bundler plugin can write for the packages a build ships. Repeat it for several SBOMs.',
     multiple: true
   },
   {
@@ -106,7 +106,7 @@ async function main() {
   const templates = cli.handlebarsTemplate || [];
   const documentFiles = cli.documentFile || [];
   const sbomFiles = cli.sbomFile || [];
-  const sbomDependencyTypes = cli.sbomDependencyTypes || [];
+  const sbomPackageLists = cli.sbomPackageList || [];
 
   const sbomSpecVersions = ['1.6', '1.5', '1.4'];
 
@@ -118,18 +118,32 @@ async function main() {
       + templates.length + " handlebarsTemplate vs. " + documentFiles.length + " documentFile). "
       + "Each handlebarsTemplate is rendered into the documentFile at the same position.\n");
 
-  if(sbomDependencyTypes.length !== 0 && sbomDependencyTypes.length !== sbomFiles.length)
-    argErrors.push("sbomDependencyTypes must be given once per sbomFile ("
-      + sbomDependencyTypes.length + " sbomDependencyTypes vs. " + sbomFiles.length + " sbomFile). "
-      + "The n-th sbomDependencyTypes applies to the n-th sbomFile; leave it out for SBOMs that cover all three.\n");
+  // Keyed by the resolved sbomFile, so that ./a.json and a.json name the same SBOM.
+  const packageListFiles = new Map();
+  for(const value of sbomPackageLists) {
+    const at = (value || "").indexOf("=");
+    const sbomFile = at > 0 ? path.resolve(value.slice(0, at)) : "";
+    if(at <= 0 || at === value.length - 1)
+      argErrors.push('Invalid sbomPackageList "' + value + '". Give it as <sbomFile>=<listFile>.\n');
+    else if(!sbomFiles.some(f => path.resolve(f) === sbomFile))
+      argErrors.push('sbomPackageList "' + value + '" names no sbomFile: the part before "=" has to be one of the sbomFile values.\n');
+    else if(packageListFiles.has(sbomFile))
+      argErrors.push('sbomPackageList is given twice for "' + value.slice(0, at) + '".\n');
+    else
+      packageListFiles.set(sbomFile, value.slice(at + 1));
+  }
 
-  // One comma-separated list per SBOM, such as "dependencies,optionalDependencies".
-  const dependencyTypesPerSbom = sbomDependencyTypes.map(value => (value || "").split(",").map(t => t.trim()).filter(t => t !== ""));
-  dependencyTypesPerSbom.forEach((types, i) => {
-    if(types.length === 0 || types.some(t => !ltd.DEPENDENCY_TYPES.includes(t)))
-      argErrors.push('Invalid sbomDependencyTypes "' + sbomDependencyTypes[i] + '". Give a comma-separated list of '
-        + ltd.DEPENDENCY_TYPES.join(", ") + ".\n");
-  });
+  const packageListOf = new Map();
+  for(const [sbomFile, listFile] of packageListFiles) {
+    try {
+      const list = JSON.parse(fs.readFileSync(listFile, "utf-8"));
+      if(!Array.isArray(list) || list.some(entry => typeof entry !== "string"))
+        throw new Error('it is not a JSON array of "name@version" strings');
+      packageListOf.set(sbomFile, list);
+    } catch(e) {
+      argErrors.push('Could not read the package list "' + listFile + '": ' + e.message + "\n");
+    }
+  }
 
   if(sbomFiles.length !== 0 && !sbomSpecVersions.includes(cli.sbomSpecVersion))
     argErrors.push('Unsupported sbomSpecVersion "' + cli.sbomSpecVersion + '". Possible values are: '
@@ -160,9 +174,9 @@ async function main() {
       redundantLicenseOverrides: cli.errorLevelRedundantLicenseOverrides,
     },
     excludeMissingPackages: cli.excludeMissingPackages,
-    sboms: sbomFiles.map((file, i) => ({
+    sboms: sbomFiles.map(file => ({
       specVersion: cli.sbomSpecVersion,
-      dependencyTypes: dependencyTypesPerSbom.length !== 0 ? dependencyTypesPerSbom[i] : undefined
+      packages: packageListOf.get(path.resolve(file))
     }))
   });
 
